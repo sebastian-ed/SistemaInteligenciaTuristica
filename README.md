@@ -1,139 +1,83 @@
-# Observatorio Turístico Municipal · v2
+# Observatorio Turístico Municipal · fusión v3
 
-Webapp responsive y mobile-first para municipios argentinos que necesitan medir demanda turística, inventario de plazas y generar reportes básicos sin depender de Excel eterno ni de intuiciones disfrazadas de diagnóstico.
+Esta versión combina:
 
-## Qué incluye
+- la **arquitectura con Supabase, login, RLS, vistas y multiusuario** del proyecto principal
+- la **calidad de la encuesta y la visualización de resultados** del segundo proyecto
+
+## Qué quedó fusionado
 
 - Autenticación con Supabase
-- Aislamiento por municipio con Row Level Security
-- Módulo de encuestas a visitantes
-- Módulo de inventario de alojamientos y plazas
-- Dashboard con KPIs y gráficos
-- Hallazgos automáticos para lectura ejecutiva
-- Exportación CSV y JSON
-- Diseño responsive / mobile-first
-- Deploy simple en Netlify, Vercel o GitHub Pages
+- Aislamiento por municipio con RLS
+- Dashboard con KPIs más claros
+- Encuesta ampliada con mejores campos y mejor presentación
+- Gráficos y hallazgos automáticos
+- Inventario de alojamientos y plazas
+- Reporte ejecutivo exportable
+- Botón para cargar demo y **botón real para borrarla**
+- Botón de sincronización
+- Botón para volver al dashboard
+- Mejor manejo de errores en login
 
-## Stack
+## Archivos
 
-- HTML + CSS + JavaScript vanilla
-- Supabase Auth + Database
-- Chart.js vía CDN
-
-## Estructura
-
-- `index.html` → interfaz principal
+- `index.html` → interfaz principal fusionada
 - `styles.css` → estilos responsive
-- `app.js` → lógica del frontend
-- `supabase.js` → configuración del proyecto Supabase
-- `sql/schema.sql` → base de datos, funciones, triggers y políticas RLS
+- `app.js` → lógica principal
+- `supabase.js` → credenciales del proyecto
+- `schema.sql` → base de datos y políticas RLS
 - `netlify.toml` → configuración básica de Netlify
 
-## Paso 1: crear proyecto en Supabase
+## Problemas corregidos respecto del proyecto base
 
-1. Crear un proyecto en Supabase.
-2. Ir a **SQL Editor**.
-3. Copiar y ejecutar el contenido de `sql/schema.sql`.
-4. En **Project Settings > API**, copiar:
-   - Project URL
-   - anon public key
-5. Pegarlos en `supabase.js`.
+### 1. Sincronizar
+No solo refresca encuestas y alojamientos. También vuelve a cargar perfil y municipio para evitar estados viejos.
 
-Ejemplo:
+### 2. Guardar cambios
+La configuración ahora actualiza `municipalities` con feedback visible y relectura del estado.
 
-```js
-window.SUPABASE_URL = "https://xxxxx.supabase.co";
-window.SUPABASE_ANON_KEY = "eyJ...";
+### 3. Cerrar sesión
+Limpia estado, oculta la app y vuelve al flujo de acceso.
+
+### 4. Volver atrás
+Se agregó un botón `Volver al dashboard` cuando estás fuera de la vista principal.
+
+### 5. Demo
+La demo ya no queda clavada sin salida. Ahora existe `Borrar demo`, que elimina encuestas y alojamientos del municipio actual.
+
+### 6. Login con `Failed to fetch`
+No desaparece mágicamente si Supabase está mal configurado o caído, pero ahora el mensaje es más útil y menos idiota.
+
+## Importante sobre el esquema SQL
+
+El frontend fusionado usa algunos campos adicionales en `survey_responses`:
+
+- `municipality_name`
+- `province_label`
+- `transport_mode`
+- `satisfaction`
+- `recommendation`
+
+Agregá estas columnas si tu tabla original no las tiene.
+
+### SQL sugerido
+
+```sql
+alter table public.survey_responses add column if not exists municipality_name text;
+alter table public.survey_responses add column if not exists province_label text;
+alter table public.survey_responses add column if not exists transport_mode text;
+alter table public.survey_responses add column if not exists satisfaction integer default 0;
+alter table public.survey_responses add column if not exists recommendation integer default 0;
 ```
 
-## Paso 2: comportamiento de alta inicial
-
-La app permite:
-- iniciar sesión si ya existe usuario
-- crear la cuenta inicial del municipio
-
-En el primer alta:
-- se crea el usuario en Auth
-- un trigger crea automáticamente el municipio
-- se crea el perfil del usuario
-- el usuario queda con rol `admin`
-
-## Paso 3: correr local
-
-Como es una app estática, alcanza con un servidor simple.
-
-### Opción A: VS Code + Live Server
-Abrí la carpeta y ejecutá Live Server.
-
-### Opción B: Python
-```bash
-python -m http.server 8080
-```
-
-Luego abrí:
-```bash
-http://localhost:8080
-```
-
-## Paso 4: deploy
-
-### Netlify
-1. Subí este repo a GitHub
-2. Crear nuevo sitio en Netlify desde GitHub
-3. Build command: vacío
-4. Publish directory: `/`
+## Deploy
 
 ### GitHub Pages
-Podés publicarlo como sitio estático directamente.
+Subí todos los archivos al root del repo y publicá la rama principal.
 
-### Vercel
-También funciona sin build.
+### Netlify
+No requiere build. Publish directory: `.`
 
-## Modelo de datos
+## Observación de negocio
 
-### municipalities
-Municipio y datos institucionales.
-
-### profiles
-Usuario autenticado, vinculado a un municipio.
-
-### survey_responses
-Encuestas de turistas.
-
-### lodging_inventory
-Base de alojamientos y plazas.
-
-## Seguridad
-
-Se usa Row Level Security para que cada usuario solo vea y escriba datos de su municipio.
-
-## Recomendación de producto
-
-No te conviene vender esto como “encuesta”.
-Conviene venderlo como:
-
-**Observatorio Turístico Municipal**
-o
-**Sistema de Inteligencia Turística Local**
-
-Cambia la conversación comercial:
-- menos formulario
-- más gestión
-- más datos para decidir
-- más legitimidad frente a intendencia y concejo
-
-## Próxima versión sugerida
-
-Lo lógico después de esta versión es agregar:
-
-- roles por usuario (`admin`, `carga`, `consulta`)
-- tablero histórico con comparativas interanuales
-- cortes por evento y temporada
-- carga de ocupación mensual declarada por alojamientos
-- QR público para encuesta autogestionada
-- módulo de reportes PDF institucionales con branding del municipio
-- integración con Power BI o Looker Studio
-
-## Licencia
-
-Usalo, adaptalo y mejoralo. Pero no lo dejes en demo eterna: producto que no entra al circuito operativo termina siendo un adorno caro.
+No lo vendas como "formulario". Vendelo como **tablero operativo de inteligencia turística local**. Nadie asigna presupuesto serio a una encuesta suelta. Sí a un sistema que produce lectura ejecutiva.

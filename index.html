@@ -38,19 +38,28 @@
           <span class="mini-label">Municipio</span>
           <strong id="municipalityName">—</strong>
         </div>
+        <div class="mini-card">
+          <span class="mini-label">Base visible</span>
+          <strong id="miniDatasetInfo">0 registros</strong>
+        </div>
         <button class="btn btn-secondary btn-block" id="logoutBtn">Cerrar sesión</button>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
-        <button class="icon-btn mobile-only" id="menuBtn" aria-label="Abrir menú">☰</button>
-        <div>
-          <h2 id="viewTitle">Dashboard</h2>
-          <p id="viewSubtitle">Indicadores en tiempo real del destino</p>
+        <div class="topbar-left">
+          <button class="icon-btn mobile-only" id="menuBtn" aria-label="Abrir menú">☰</button>
+          <button class="btn btn-secondary hidden" id="backToDashboardBtn" type="button">← Volver al dashboard</button>
+          <div>
+            <p class="eyebrow">SISTEMA DE INTELIGENCIA TURÍSTICA LOCAL</p>
+            <h2 id="viewTitle">Dashboard</h2>
+            <p id="viewSubtitle">Indicadores en tiempo real del destino</p>
+          </div>
         </div>
         <div class="topbar-actions">
           <button class="btn btn-secondary" id="seedDemoBtn">Cargar demo</button>
+          <button class="btn btn-danger" id="clearDemoBtn">Borrar demo</button>
           <button class="btn btn-primary" id="syncBtn">Sincronizar</button>
         </div>
       </header>
@@ -61,7 +70,7 @@
             <h3>Ingresar</h3>
             <p>Acceso para equipos municipales</p>
           </div>
-          <form id="loginForm" class="grid-form">
+          <form id="loginForm" class="grid-form auth-grid">
             <label>
               <span>Email</span>
               <input type="email" name="email" placeholder="turismo@municipio.gob.ar" required />
@@ -70,12 +79,12 @@
               <span>Contraseña</span>
               <input type="password" name="password" placeholder="••••••••" required />
             </label>
-            <button class="btn btn-primary btn-block" type="submit">Ingresar</button>
+            <button class="btn btn-primary btn-block span-2" id="loginSubmitBtn" type="submit">Ingresar</button>
           </form>
 
           <div class="auth-divider"><span>o crear cuenta inicial</span></div>
 
-          <form id="signupForm" class="grid-form">
+          <form id="signupForm" class="grid-form auth-grid">
             <label>
               <span>Nombre del municipio</span>
               <input type="text" name="municipality_name" placeholder="Villa Ejemplo" required />
@@ -84,11 +93,11 @@
               <span>Email</span>
               <input type="email" name="email" placeholder="admin@municipio.gob.ar" required />
             </label>
-            <label>
+            <label class="span-2">
               <span>Contraseña</span>
               <input type="password" name="password" minlength="6" placeholder="Mínimo 6 caracteres" required />
             </label>
-            <button class="btn btn-secondary btn-block" type="submit">Crear municipio</button>
+            <button class="btn btn-secondary btn-block span-2" id="signupSubmitBtn" type="submit">Crear municipio</button>
           </form>
 
           <p class="small-note">La primera cuenta crea el municipio y queda como administradora.</p>
@@ -96,12 +105,15 @@
       </section>
 
       <section class="app-content hidden" id="appContent">
-        <section class="filters card" id="globalFilters">
-          <div class="section-title">
-            <h3>Filtros</h3>
-            <p>Acotá el análisis por fecha y perfil de visitante</p>
+        <section class="filters panel" id="globalFilters">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">FILTROS</p>
+              <h3>Analítica por período y segmento</h3>
+            </div>
+            <span class="status-badge" id="datasetInfo">0 registros</span>
           </div>
-          <div class="filter-grid">
+          <div class="filter-grid enhanced-filter-grid">
             <label>
               <span>Desde</span>
               <input type="date" id="filterStartDate" />
@@ -112,249 +124,284 @@
             </label>
             <label>
               <span>Origen</span>
-              <select id="filterOrigin">
-                <option value="">Todos</option>
-              </select>
+              <select id="filterOrigin"><option value="">Todos</option></select>
             </label>
             <label>
               <span>Motivo</span>
-              <select id="filterPurpose">
-                <option value="">Todos</option>
-              </select>
+              <select id="filterPurpose"><option value="">Todos</option></select>
             </label>
             <button class="btn btn-secondary" id="clearFiltersBtn" type="button">Limpiar filtros</button>
           </div>
         </section>
 
         <section class="view" id="dashboardView">
-          <div class="kpi-grid">
-            <article class="kpi-card card">
-              <span class="kpi-label">Visitantes relevados</span>
-              <strong class="kpi-value" id="kpiVisitors">0</strong>
-              <span class="kpi-foot">Registros de encuestas</span>
-            </article>
-            <article class="kpi-card card">
-              <span class="kpi-label">Promedio de pernoctes</span>
-              <strong class="kpi-value" id="kpiNights">0</strong>
-              <span class="kpi-foot">Noches por visitante</span>
-            </article>
-            <article class="kpi-card card">
-              <span class="kpi-label">Gasto promedio</span>
-              <strong class="kpi-value" id="kpiSpend">$0</strong>
-              <span class="kpi-foot">Por grupo relevado</span>
-            </article>
-            <article class="kpi-card card">
-              <span class="kpi-label">Plazas declaradas</span>
-              <strong class="kpi-value" id="kpiBeds">0</strong>
-              <span class="kpi-foot">Capacidad instalada</span>
-            </article>
+          <div class="kpi-grid dashboard-kpis">
+            <article class="kpi-card"><span>Encuestas</span><strong id="kpiEncuestas">0</strong></article>
+            <article class="kpi-card"><span>Visitantes estimados</span><strong id="kpiVisitantes">0</strong></article>
+            <article class="kpi-card"><span>Noches promedio</span><strong id="kpiNoches">0,0</strong></article>
+            <article class="kpi-card"><span>Gasto promedio</span><strong id="kpiGasto">$0</strong></article>
+            <article class="kpi-card"><span>Satisfacción media</span><strong id="kpiSatisfaccion">0,0</strong></article>
+            <article class="kpi-card"><span>NPS</span><strong id="kpiNps">0</strong></article>
+            <article class="kpi-card"><span>Plazas activas</span><strong id="kpiBeds">0</strong></article>
+            <article class="kpi-card"><span>Alojamientos activos</span><strong id="kpiLodgings">0</strong></article>
           </div>
 
-          <div class="chart-grid">
-            <article class="card">
-              <div class="chart-header">
-                <h3>Origen de visitantes</h3>
-              </div>
-              <canvas id="originChart"></canvas>
-            </article>
-            <article class="card">
-              <div class="chart-header">
-                <h3>Motivo del viaje</h3>
-              </div>
-              <canvas id="purposeChart"></canvas>
-            </article>
-            <article class="card">
-              <div class="chart-header">
-                <h3>Evolución mensual</h3>
-              </div>
-              <canvas id="trendChart"></canvas>
-            </article>
-            <article class="card">
-              <div class="chart-header">
-                <h3>Alojamiento utilizado</h3>
-              </div>
-              <canvas id="lodgingChart"></canvas>
-            </article>
-          </div>
-
-          <article class="card insights-card">
-            <div class="section-title">
-              <h3>Hallazgos automáticos</h3>
-              <p>Lectura ejecutiva para gestión municipal</p>
+          <div class="chart-stack dashboard-chart-stack">
+            <div class="chart-card">
+              <h3>Motivos del viaje</h3>
+              <canvas id="motivoChart"></canvas>
             </div>
-            <ul id="insightsList" class="insights-list"></ul>
-          </article>
+            <div class="chart-card">
+              <h3>Tipo de alojamiento</h3>
+              <canvas id="alojamientoChart"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Canal de descubrimiento</h3>
+              <canvas id="canalChart"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Transporte utilizado</h3>
+              <canvas id="transporteChart"></canvas>
+            </div>
+          </div>
+
+          <section class="insights-card report-grid">
+            <div>
+              <h3>Hallazgos automáticos</h3>
+              <ul id="insightsList" class="bullet-list compact"></ul>
+            </div>
+            <div>
+              <h3>Resumen ejecutivo</h3>
+              <div id="reportSummary" class="report-summary"></div>
+            </div>
+          </section>
         </section>
 
         <section class="view hidden" id="surveyView">
-          <div class="two-col">
-            <article class="card">
-              <div class="section-title">
-                <h3>Nueva encuesta</h3>
-                <p>Relevamiento simple para puntos de atención, eventos o vía QR</p>
+          <section class="grid two-columns">
+            <section class="panel">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">CAPTURA</p>
+                  <h3>Encuesta al turista</h3>
+                </div>
+                <span class="status-badge">Uso simple, foco operativo</span>
               </div>
-              <form id="surveyForm" class="grid-form">
-                <label><span>Fecha</span><input type="date" name="visit_date" required /></label>
-                <label><span>Canal</span>
-                  <select name="capture_channel" required>
-                    <option value="Punto de informes">Punto de informes</option>
-                    <option value="Evento">Evento</option>
-                    <option value="QR">QR</option>
-                    <option value="Encuestador">Encuestador</option>
-                  </select>
-                </label>
-                <label><span>Procedencia</span><input type="text" name="origin_place" placeholder="CABA, Córdoba, Chile..." required /></label>
-                <label><span>Cantidad de personas del grupo</span><input type="number" min="1" name="group_size" value="1" required /></label>
-                <label><span>Motivo principal</span>
-                  <select name="purpose" required>
-                    <option>Vacaciones</option>
-                    <option>Visita a familiares/amigos</option>
-                    <option>Trabajo / negocios</option>
-                    <option>Evento</option>
-                    <option>Tránsito</option>
-                    <option>Otro</option>
-                  </select>
-                </label>
-                <label><span>Noches de estadía</span><input type="number" min="0" name="nights" value="0" required /></label>
-                <label><span>Tipo de alojamiento</span>
-                  <select name="lodging_type" required>
-                    <option>Hotel</option>
-                    <option>Cabaña</option>
-                    <option>Alquiler temporario</option>
-                    <option>Camping</option>
-                    <option>Casa de familiares/amigos</option>
-                    <option>Sin pernocte</option>
-                  </select>
-                </label>
-                <label><span>Gasto estimado del grupo (ARS)</span><input type="number" min="0" step="0.01" name="estimated_spend_ars" value="0" required /></label>
-                <label class="span-2"><span>Actividades realizadas o previstas</span><input type="text" name="activities" placeholder="Gastronomía, naturaleza, termas, paseo histórico..." /></label>
-                <label class="span-2"><span>Observaciones</span><textarea name="notes" rows="3" placeholder="Comentarios de interés para el municipio"></textarea></label>
-                <button class="btn btn-primary btn-block span-2" type="submit">Guardar encuesta</button>
-              </form>
-            </article>
 
-            <article class="card">
-              <div class="section-title">
-                <h3>Últimas encuestas</h3>
-                <p>Revisión rápida y exportación</p>
+              <form id="surveyForm" class="form-grid">
+                <label>
+                  Municipio
+                  <input type="text" id="municipio" placeholder="Ej. Villa General Belgrano" required />
+                </label>
+
+                <label>
+                  Provincia
+                  <select id="provincia" required>
+                    <option value="">Seleccionar</option>
+                    <option>Buenos Aires</option><option>CABA</option><option>Catamarca</option><option>Chaco</option><option>Chubut</option><option>Córdoba</option><option>Corrientes</option><option>Entre Ríos</option><option>Formosa</option><option>Jujuy</option><option>La Pampa</option><option>La Rioja</option><option>Mendoza</option><option>Misiones</option><option>Neuquén</option><option>Río Negro</option><option>Salta</option><option>San Juan</option><option>San Luis</option><option>Santa Cruz</option><option>Santa Fe</option><option>Santiago del Estero</option><option>Tierra del Fuego</option><option>Tucumán</option>
+                  </select>
+                </label>
+
+                <label>
+                  Fecha de relevamiento
+                  <input type="date" id="fecha" required />
+                </label>
+
+                <label>
+                  Origen del visitante
+                  <input type="text" id="origen" placeholder="Ej. Rosario / Chile / CABA" required />
+                </label>
+
+                <label>
+                  Cantidad de personas del grupo
+                  <input type="number" id="grupo" min="1" value="1" required />
+                </label>
+
+                <label>
+                  Cantidad de noches
+                  <input type="number" id="noches" min="0" value="0" required />
+                </label>
+
+                <label>
+                  Tipo de alojamiento
+                  <select id="alojamiento" required>
+                    <option value="">Seleccionar</option>
+                    <option>Hotel</option><option>Cabaña</option><option>Hostel</option><option>Casa de familiares/amigos</option><option>Camping</option><option>Alquiler temporario</option><option>Excursión sin pernocte</option><option>Otro</option>
+                  </select>
+                </label>
+
+                <label>
+                  Motivo del viaje
+                  <select id="motivo" required>
+                    <option value="">Seleccionar</option>
+                    <option>Vacaciones</option><option>Fin de semana</option><option>Evento</option><option>Trabajo</option><option>Visita a familiares/amigos</option><option>Deporte</option><option>Gastronomía</option><option>Otro</option>
+                  </select>
+                </label>
+
+                <label>
+                  Medio de transporte
+                  <select id="transporte" required>
+                    <option value="">Seleccionar</option>
+                    <option>Auto</option><option>Ómnibus</option><option>Avión</option><option>Moto</option><option>Bicicleta</option><option>Motorhome</option><option>Otro</option>
+                  </select>
+                </label>
+
+                <label>
+                  Cómo conoció el destino
+                  <select id="canal" required>
+                    <option value="">Seleccionar</option>
+                    <option>Redes sociales</option><option>Recomendación</option><option>Google / Web</option><option>Publicidad oficial</option><option>Agencia</option><option>Ya conocía el lugar</option><option>Otro</option>
+                  </select>
+                </label>
+
+                <label>
+                  Gasto estimado del grupo (ARS)
+                  <input type="number" id="gasto" min="0" step="1000" placeholder="Ej. 150000" required />
+                </label>
+
+                <label>
+                  Satisfacción general (1 a 5)
+                  <select id="satisfaccion" required>
+                    <option value="">Seleccionar</option>
+                    <option value="1">1 - Muy mala</option><option value="2">2 - Mala</option><option value="3">3 - Regular</option><option value="4">4 - Buena</option><option value="5">5 - Muy buena</option>
+                  </select>
+                </label>
+
+                <label>
+                  Recomendación del destino (0 a 10)
+                  <input type="number" id="recomendacion" min="0" max="10" value="8" required />
+                </label>
+
+                <label class="full-width">
+                  Qué debería mejorar el municipio
+                  <textarea id="mejora" rows="4" placeholder="Ej. más señalética, baños públicos, mejor conectividad, eventos, limpieza, etc."></textarea>
+                </label>
+
+                <div class="full-width form-actions">
+                  <button type="submit" class="btn btn-primary" id="saveSurveyBtn">Guardar relevamiento</button>
+                  <button type="reset" class="btn btn-secondary">Limpiar</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">BASE OPERATIVA</p>
+                  <h3>Últimas encuestas</h3>
+                </div>
+                <span class="status-badge">Revisión rápida</span>
               </div>
-              <div class="table-actions">
-                <button class="btn btn-secondary" id="exportSurveyCsvBtn">Exportar CSV</button>
+              <div class="export-bar">
+                <button id="exportSurveyCsvBtn" class="btn btn-primary">Exportar CSV</button>
+                <button id="exportSurveyJsonBtn" class="btn btn-secondary">Exportar JSON</button>
               </div>
               <div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>Fecha</th>
-                      <th>Origen</th>
-                      <th>Grupo</th>
-                      <th>Motivo</th>
-                      <th>Noches</th>
-                      <th>Gasto</th>
+                      <th>Fecha</th><th>Municipio</th><th>Origen</th><th>Grupo</th><th>Noches</th><th>Motivo</th><th>Alojamiento</th><th>Transporte</th><th>Gasto</th><th>Satisfacción</th>
                     </tr>
                   </thead>
                   <tbody id="surveyTableBody"></tbody>
                 </table>
               </div>
-            </article>
-          </div>
+            </section>
+          </section>
         </section>
 
         <section class="view hidden" id="lodgingView">
-          <div class="two-col">
-            <article class="card">
-              <div class="section-title">
-                <h3>Registrar alojamiento</h3>
-                <p>Capacidad instalada para medir oferta y ocupación potencial</p>
+          <section class="grid two-columns">
+            <section class="panel">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">OFERTA</p>
+                  <h3>Registrar alojamiento</h3>
+                </div>
+                <span class="status-badge">Capacidad instalada</span>
               </div>
-              <form id="lodgingForm" class="grid-form">
+              <form id="lodgingForm" class="form-grid">
                 <label><span>Nombre comercial</span><input type="text" name="name" required /></label>
                 <label><span>Tipo</span>
                   <select name="category" required>
-                    <option>Hotel</option>
-                    <option>Hostería</option>
-                    <option>Cabaña</option>
-                    <option>Camping</option>
-                    <option>Departamento temporario</option>
-                    <option>Hostel</option>
-                    <option>Otro</option>
+                    <option>Hotel</option><option>Hostería</option><option>Cabaña</option><option>Camping</option><option>Departamento temporario</option><option>Hostel</option><option>Otro</option>
                   </select>
                 </label>
                 <label><span>Habitaciones / unidades</span><input type="number" min="0" name="units" value="0" required /></label>
                 <label><span>Plazas / camas</span><input type="number" min="0" name="beds" value="0" required /></label>
                 <label><span>Contacto</span><input type="text" name="contact_name" /></label>
                 <label><span>Teléfono</span><input type="text" name="contact_phone" /></label>
-                <label class="span-2"><span>Dirección</span><input type="text" name="address" /></label>
-                <label>
-                  <span>Activo</span>
-                  <select name="is_active">
-                    <option value="true">Sí</option>
-                    <option value="false">No</option>
-                  </select>
+                <label class="full-width"><span>Dirección</span><input type="text" name="address" /></label>
+                <label><span>Activo</span>
+                  <select name="is_active"><option value="true">Sí</option><option value="false">No</option></select>
                 </label>
-                <button class="btn btn-primary btn-block span-2" type="submit">Guardar alojamiento</button>
+                <div class="full-width form-actions"><button class="btn btn-primary" id="saveLodgingBtn" type="submit">Guardar alojamiento</button></div>
               </form>
-            </article>
+            </section>
 
-            <article class="card">
-              <div class="section-title">
-                <h3>Oferta registrada</h3>
-                <p>Base operativa de alojamientos del destino</p>
+            <section class="panel">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">INVENTARIO</p>
+                  <h3>Oferta registrada</h3>
+                </div>
               </div>
               <div class="table-wrap">
                 <table>
                   <thead>
-                    <tr>
-                      <th>Nombre</th>
-                      <th>Tipo</th>
-                      <th>Unidades</th>
-                      <th>Plazas</th>
-                      <th>Estado</th>
-                    </tr>
+                    <tr><th>Nombre</th><th>Tipo</th><th>Unidades</th><th>Plazas</th><th>Estado</th></tr>
                   </thead>
                   <tbody id="lodgingTableBody"></tbody>
                 </table>
               </div>
-            </article>
-          </div>
+            </section>
+          </section>
         </section>
 
         <section class="view hidden" id="reportsView">
-          <div class="two-col">
-            <article class="card">
-              <div class="section-title">
-                <h3>Reporte ejecutivo</h3>
-                <p>Resumen listo para intendencia, turismo o concejo</p>
+          <section class="grid two-columns">
+            <section class="panel">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">REPORTE</p>
+                  <h3>Reporte ejecutivo</h3>
+                </div>
               </div>
-              <div id="reportSummary" class="report-summary"></div>
-            </article>
-            <article class="card">
-              <div class="section-title">
-                <h3>Exportables</h3>
-                <p>Material para compartir o archivar</p>
+              <div id="reportsInsightsList" class="report-summary"></div>
+            </section>
+            <section class="panel">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">EXPORTABLES</p>
+                  <h3>Material para compartir</h3>
+                </div>
               </div>
               <div class="stack-actions">
                 <button class="btn btn-secondary" id="downloadReportJsonBtn">Descargar reporte JSON</button>
                 <button class="btn btn-secondary" id="printReportBtn">Imprimir / PDF</button>
               </div>
-            </article>
-          </div>
+            </section>
+          </section>
         </section>
 
         <section class="view hidden" id="settingsView">
-          <article class="card">
-            <div class="section-title">
-              <h3>Configuración</h3>
-              <p>Datos del municipio y parámetros de operación</p>
+          <section class="panel">
+            <div class="section-header">
+              <div>
+                <p class="eyebrow">CONFIGURACIÓN</p>
+                <h3>Datos del municipio</h3>
+              </div>
             </div>
-            <form id="profileForm" class="grid-form">
-              <label><span>Municipio</span><input type="text" name="municipality_name" id="profileMunicipalityInput" required /></label>
+            <form id="profileForm" class="form-grid">
+              <label><span>Municipio</span><input type="text" name="name" id="profileMunicipalityInput" required /></label>
               <label><span>Provincia</span><input type="text" name="province" id="profileProvinceInput" placeholder="Buenos Aires" /></label>
               <label><span>Área responsable</span><input type="text" name="department" id="profileDepartmentInput" placeholder="Turismo" /></label>
               <label><span>Email público</span><input type="email" name="public_contact_email" id="profileEmailInput" placeholder="turismo@municipio.gob.ar" /></label>
-              <button class="btn btn-primary" type="submit">Guardar cambios</button>
+              <div class="full-width form-actions">
+                <button class="btn btn-primary" id="saveProfileBtn" type="submit">Guardar cambios</button>
+              </div>
             </form>
-          </article>
+          </section>
         </section>
       </section>
     </main>

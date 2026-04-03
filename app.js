@@ -5,12 +5,7 @@ const state = {
   surveyResponses: [],
   lodgingInventory: [],
   charts: {},
-  filters: {
-    startDate: "",
-    endDate: "",
-    origin: "",
-    purpose: "",
-  },
+  filters: { startDate: "", endDate: "", origin: "", purpose: "" },
 };
 
 const el = {
@@ -18,11 +13,13 @@ const el = {
   appContent: document.getElementById("appContent"),
   toast: document.getElementById("toast"),
   municipalityName: document.getElementById("municipalityName"),
+  miniDatasetInfo: document.getElementById("miniDatasetInfo"),
   viewTitle: document.getElementById("viewTitle"),
   viewSubtitle: document.getElementById("viewSubtitle"),
   surveyTableBody: document.getElementById("surveyTableBody"),
   lodgingTableBody: document.getElementById("lodgingTableBody"),
   insightsList: document.getElementById("insightsList"),
+  reportsInsightsList: document.getElementById("reportsInsightsList"),
   reportSummary: document.getElementById("reportSummary"),
   profileMunicipalityInput: document.getElementById("profileMunicipalityInput"),
   profileProvinceInput: document.getElementById("profileProvinceInput"),
@@ -32,48 +29,39 @@ const el = {
   filterEndDate: document.getElementById("filterEndDate"),
   filterOrigin: document.getElementById("filterOrigin"),
   filterPurpose: document.getElementById("filterPurpose"),
+  backToDashboardBtn: document.getElementById("backToDashboardBtn"),
 };
 
 const viewMeta = {
-  dashboard: {
-    title: "Dashboard",
-    subtitle: "Indicadores en tiempo real del destino",
-  },
-  survey: {
-    title: "Encuestas",
-    subtitle: "Carga y revisión de relevamientos turísticos",
-  },
-  lodging: {
-    title: "Alojamientos",
-    subtitle: "Inventario local de oferta y plazas",
-  },
-  reports: {
-    title: "Reportes",
-    subtitle: "Síntesis ejecutiva y exportables",
-  },
-  settings: {
-    title: "Configuración",
-    subtitle: "Datos institucionales del municipio",
-  },
+  dashboard: { title: "Dashboard", subtitle: "Indicadores en tiempo real del destino" },
+  survey: { title: "Encuestas", subtitle: "Captura mejorada y revisión operativa" },
+  lodging: { title: "Alojamientos", subtitle: "Inventario local de oferta y plazas" },
+  reports: { title: "Reportes", subtitle: "Síntesis ejecutiva y exportables" },
+  settings: { title: "Configuración", subtitle: "Datos institucionales del municipio" },
 };
 
 let supabaseClient = null;
 
-function initSupabase() {
-  if (!window.supabase || !window.SUPABASE_URL || !window.SUPABASE_ANON_KEY ||
-      window.SUPABASE_URL.includes("TU-PROYECTO") || window.SUPABASE_ANON_KEY.includes("TU_ANON")) {
-    showToast("Configurá Supabase en supabase.js antes de usar la app.");
-    return false;
-  }
-  supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-  return true;
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function showToast(message) {
   el.toast.textContent = message;
   el.toast.classList.remove("hidden");
   window.clearTimeout(showToast._t);
-  showToast._t = window.setTimeout(() => el.toast.classList.add("hidden"), 2600);
+  showToast._t = window.setTimeout(() => el.toast.classList.add("hidden"), 3200);
+}
+
+function setButtonBusy(btn, busy, labelBusy, labelIdle) {
+  if (!btn) return;
+  btn.disabled = busy;
+  btn.textContent = busy ? labelBusy : labelIdle;
 }
 
 function money(value) {
@@ -100,33 +88,37 @@ function downloadFile(filename, content, mimeType) {
   URL.revokeObjectURL(url);
 }
 
-function setActiveView(viewName) {
-  document.querySelectorAll(".nav-link").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.view === viewName);
-  });
-  document.querySelectorAll(".view").forEach(view => view.classList.add("hidden"));
-  const target = document.getElementById(`${viewName}View`);
-  if (target) target.classList.remove("hidden");
+function initSupabase() {
+  try {
+    if (!window.supabase || !window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+      showToast("Configurá Supabase en supabase.js antes de usar la app.");
+      return false;
+    }
+    supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    return true;
+  } catch (error) {
+    console.error(error);
+    showToast("No se pudo inicializar Supabase.");
+    return false;
+  }
+}
 
+function setActiveView(viewName) {
+  document.querySelectorAll(".nav-link").forEach(btn => btn.classList.toggle("active", btn.dataset.view === viewName));
+  document.querySelectorAll(".view").forEach(view => view.classList.add("hidden"));
+  document.getElementById(`${viewName}View`)?.classList.remove("hidden");
   el.viewTitle.textContent = viewMeta[viewName].title;
   el.viewSubtitle.textContent = viewMeta[viewName].subtitle;
+  el.backToDashboardBtn.classList.toggle("hidden", viewName === "dashboard");
 }
 
 function populateFilterOptions() {
   const origins = [...new Set(state.surveyResponses.map(r => r.origin_place).filter(Boolean))].sort();
   const purposes = [...new Set(state.surveyResponses.map(r => r.purpose).filter(Boolean))].sort();
-
   el.filterOrigin.innerHTML = `<option value="">Todos</option>` + origins.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
   el.filterPurpose.innerHTML = `<option value="">Todos</option>` + purposes.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  el.filterOrigin.value = state.filters.origin;
+  el.filterPurpose.value = state.filters.purpose;
 }
 
 function getFilteredSurveyResponses() {
@@ -139,21 +131,61 @@ function getFilteredSurveyResponses() {
   });
 }
 
-function renderSurveyTable() {
-  const rows = [...state.surveyResponses]
-    .sort((a, b) => (a.visit_date < b.visit_date ? 1 : -1))
-    .slice(0, 15);
+function countBy(rows, key) {
+  return rows.reduce((acc, row) => {
+    const value = row[key] || "Sin dato";
+    acc[value] = (acc[value] || 0) + 1;
+    return acc;
+  }, {});
+}
 
+function destroyCharts() {
+  Object.values(state.charts).forEach(chart => chart.destroy());
+  state.charts = {};
+}
+
+function buildChart(canvasId, label, counts) {
+  const node = document.getElementById(canvasId);
+  state.charts[canvasId] = new Chart(node, {
+    type: "bar",
+    data: { labels: Object.keys(counts), datasets: [{ label, data: Object.values(counts), borderWidth: 1, borderRadius: 8 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#617086" }, grid: { color: "rgba(17,32,51,0.05)" } },
+        y: { beginAtZero: true, ticks: { color: "#617086", precision: 0 }, grid: { color: "rgba(17,32,51,0.05)" } },
+      },
+    },
+  });
+}
+
+function renderCharts() {
+  destroyCharts();
+  const rows = getFilteredSurveyResponses();
+  buildChart("motivoChart", "Motivos", countBy(rows, "purpose"));
+  buildChart("alojamientoChart", "Alojamientos", countBy(rows, "lodging_type"));
+  buildChart("canalChart", "Canales", countBy(rows, "capture_channel"));
+  buildChart("transporteChart", "Transportes", countBy(rows, "transport_mode"));
+}
+
+function renderSurveyTable() {
+  const rows = [...getFilteredSurveyResponses()].sort((a, b) => (a.visit_date < b.visit_date ? 1 : -1));
   el.surveyTableBody.innerHTML = rows.map(row => `
     <tr>
       <td>${formatDate(row.visit_date)}</td>
+      <td>${escapeHtml(row.municipality_name || state.municipality?.name || "—")}</td>
       <td>${escapeHtml(row.origin_place)}</td>
       <td>${number(row.group_size)}</td>
-      <td>${escapeHtml(row.purpose)}</td>
       <td>${number(row.nights)}</td>
+      <td>${escapeHtml(row.purpose)}</td>
+      <td>${escapeHtml(row.lodging_type)}</td>
+      <td>${escapeHtml(row.transport_mode || "—")}</td>
       <td>${money(row.estimated_spend_ars)}</td>
+      <td>${number(row.satisfaction, 0)}/5</td>
     </tr>
-  `).join("") || `<tr><td colspan="6">Todavía no hay encuestas cargadas.</td></tr>`;
+  `).join("") || `<tr><td colspan="10">Todavía no hay encuestas cargadas.</td></tr>`;
 }
 
 function renderLodgingTable() {
@@ -169,124 +201,72 @@ function renderLodgingTable() {
   `).join("") || `<tr><td colspan="5">Todavía no hay alojamientos cargados.</td></tr>`;
 }
 
-function destroyChart(name) {
-  if (state.charts[name]) {
-    state.charts[name].destroy();
-    delete state.charts[name];
-  }
-}
-
-function buildCountMap(rows, key) {
-  return rows.reduce((acc, row) => {
-    const value = row[key] || "Sin dato";
-    acc[value] = (acc[value] || 0) + 1;
-    return acc;
-  }, {});
-}
-
-function buildMonthlyTrend(rows) {
-  const map = {};
-  rows.forEach(row => {
-    const month = (row.visit_date || "").slice(0, 7);
-    if (!month) return;
-    map[month] = (map[month] || 0) + Number(row.group_size || 0);
-  });
-  const entries = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
-  return {
-    labels: entries.map(([m]) => {
-      const [y, mo] = m.split("-");
-      return `${mo}/${y.slice(-2)}`;
-    }),
-    values: entries.map(([, v]) => v),
-  };
-}
-
-function renderCharts() {
-  const rows = getFilteredSurveyResponses();
-  const originMap = buildCountMap(rows, "origin_place");
-  const purposeMap = buildCountMap(rows, "purpose");
-  const lodgingMap = buildCountMap(rows, "lodging_type");
-  const trend = buildMonthlyTrend(rows);
-
-  destroyChart("origin");
-  destroyChart("purpose");
-  destroyChart("trend");
-  destroyChart("lodging");
-
-  state.charts.origin = new Chart(document.getElementById("originChart"), {
-    type: "doughnut",
-    data: {
-      labels: Object.keys(originMap),
-      datasets: [{ data: Object.values(originMap) }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-
-  state.charts.purpose = new Chart(document.getElementById("purposeChart"), {
-    type: "bar",
-    data: {
-      labels: Object.keys(purposeMap),
-      datasets: [{ data: Object.values(purposeMap) }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-  });
-
-  state.charts.trend = new Chart(document.getElementById("trendChart"), {
-    type: "line",
-    data: {
-      labels: trend.labels,
-      datasets: [{ data: trend.values, fill: false, tension: .25 }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-  });
-
-  state.charts.lodging = new Chart(document.getElementById("lodgingChart"), {
-    type: "pie",
-    data: {
-      labels: Object.keys(lodgingMap),
-      datasets: [{ data: Object.values(lodgingMap) }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
+function getTopLabel(counts) {
+  const entries = Object.entries(counts);
+  if (!entries.length) return "Sin datos";
+  return entries.sort((a, b) => b[1] - a[1])[0][0];
 }
 
 function renderKpisAndInsights() {
   const rows = getFilteredSurveyResponses();
-  const visitors = rows.length;
-  const totalNights = rows.reduce((sum, row) => sum + Number(row.nights || 0), 0);
-  const avgNights = visitors ? totalNights / visitors : 0;
-  const avgSpend = visitors ? rows.reduce((sum, row) => sum + Number(row.estimated_spend_ars || 0), 0) / visitors : 0;
-  const beds = state.lodgingInventory.filter(x => x.is_active).reduce((sum, row) => sum + Number(row.beds || 0), 0);
+  const surveys = rows.length;
+  const visitors = rows.reduce((sum, row) => sum + Number(row.group_size || 0), 0);
+  const avgNights = surveys ? rows.reduce((sum, row) => sum + Number(row.nights || 0), 0) / surveys : 0;
+  const avgSpend = surveys ? rows.reduce((sum, row) => sum + Number(row.estimated_spend_ars || 0), 0) / surveys : 0;
+  const avgSatisfaction = surveys ? rows.reduce((sum, row) => sum + Number(row.satisfaction || 0), 0) / surveys : 0;
+  const scores = rows.map(r => Number(r.recommendation || 0));
+  const promoters = scores.filter(v => v >= 9).length;
+  const detractors = scores.filter(v => v <= 6).length;
+  const nps = scores.length ? Math.round(((promoters - detractors) / scores.length) * 100) : 0;
+  const activeLodgings = state.lodgingInventory.filter(x => x.is_active);
+  const beds = activeLodgings.reduce((sum, row) => sum + Number(row.beds || 0), 0);
 
-  document.getElementById("kpiVisitors").textContent = number(visitors);
-  document.getElementById("kpiNights").textContent = number(avgNights, 1);
-  document.getElementById("kpiSpend").textContent = money(avgSpend);
+  document.getElementById("kpiEncuestas").textContent = number(surveys);
+  document.getElementById("kpiVisitantes").textContent = number(visitors);
+  document.getElementById("kpiNoches").textContent = number(avgNights, 1);
+  document.getElementById("kpiGasto").textContent = money(avgSpend);
+  document.getElementById("kpiSatisfaccion").textContent = number(avgSatisfaction, 1);
+  document.getElementById("kpiNps").textContent = number(nps);
   document.getElementById("kpiBeds").textContent = number(beds);
+  document.getElementById("kpiLodgings").textContent = number(activeLodgings.length);
+  el.miniDatasetInfo.textContent = `${number(surveys)} registros`;
+  document.getElementById("datasetInfo").textContent = `${number(surveys)} visibles / ${number(state.surveyResponses.length)} totales`;
 
-  const originMap = buildCountMap(rows, "origin_place");
-  const purposeMap = buildCountMap(rows, "purpose");
-  const topOrigin = Object.entries(originMap).sort((a,b) => b[1]-a[1])[0];
-  const topPurpose = Object.entries(purposeMap).sort((a,b) => b[1]-a[1])[0];
-  const noOvernight = rows.filter(r => Number(r.nights || 0) === 0).length;
-  const withOvernight = rows.filter(r => Number(r.nights || 0) > 0).length;
-  const overnightShare = visitors ? (withOvernight / visitors) * 100 : 0;
+  const purposes = countBy(rows, "purpose");
+  const lodgings = countBy(rows, "lodging_type");
+  const channels = countBy(rows, "capture_channel");
+  const transports = countBy(rows, "transport_mode");
 
-  const insights = [];
-  if (topOrigin) insights.push(`La procedencia más relevada es ${topOrigin[0]}, con ${number(topOrigin[1])} encuestas. Esto sirve para orientar campañas y acuerdos promocionales.`);
-  if (topPurpose) insights.push(`El motivo dominante es ${topPurpose[0]}. La agenda de productos y comunicación debería alinearse con esa demanda real, no con intuiciones.`);
-  insights.push(`El promedio de estadía es de ${number(avgNights, 1)} noches y el gasto promedio estimado es de ${money(avgSpend)} por grupo.`);
-  insights.push(`El ${number(overnightShare, 1)}% de los registros pernocta. Si ese ratio es bajo, el municipio tiene un problema de excursión sin derrame o de oferta insuficiente.`);
-  if (beds > 0) insights.push(`Hay ${number(beds)} plazas activas registradas. Sin inventario de camas, hablar de ocupación es vender humo con PowerPoint.`);
+  const messages = rows.length ? [
+    `El motivo de viaje más frecuente es ${getTopLabel(purposes)}.`,
+    `El alojamiento dominante es ${getTopLabel(lodgings)}.`,
+    `El principal canal de descubrimiento del destino es ${getTopLabel(channels)}.`,
+    `El transporte más utilizado es ${getTopLabel(transports)}.`,
+    `Se relevaron ${number(visitors)} visitantes estimados en ${number(surveys)} encuestas.`,
+    `La estadía promedio es de ${number(avgNights, 1)} noches.`,
+    `El gasto promedio estimado por grupo es ${money(avgSpend)}.`,
+    `La satisfacción promedio es ${number(avgSatisfaction, 1)} sobre 5, con NPS ${number(nps)}.`
+  ] : ["No hay datos todavía. Sin base, no hay inteligencia; sólo intuición."];
 
-  el.insightsList.innerHTML = insights.map(item => `<li>${escapeHtml(item)}</li>`).join("");
-
+  const listHtml = messages.map(msg => `<li>${escapeHtml(msg)}</li>`).join("");
+  el.insightsList.innerHTML = listHtml;
+  el.reportsInsightsList.innerHTML = messages.map(msg => `<div class="report-block">${escapeHtml(msg)}</div>`).join("");
   el.reportSummary.innerHTML = `
-    <div class="report-block"><strong>Base relevada:</strong> ${number(visitors)} encuestas bajo los filtros activos.</div>
-    <div class="report-block"><strong>Demanda:</strong> estadía promedio de ${number(avgNights,1)} noches y gasto medio de ${money(avgSpend)} por grupo.</div>
-    <div class="report-block"><strong>Mercado principal:</strong> ${topOrigin ? escapeHtml(topOrigin[0]) : "Sin dato"}.</div>
-    <div class="report-block"><strong>Motivación dominante:</strong> ${topPurpose ? escapeHtml(topPurpose[0]) : "Sin dato"}.</div>
-    <div class="report-block"><strong>Oferta:</strong> ${number(beds)} plazas activas declaradas en la base local.</div>
+    <div class="report-block"><strong>Encuestas:</strong> ${number(surveys)} registros bajo filtros activos.</div>
+    <div class="report-block"><strong>Visitantes estimados:</strong> ${number(visitors)} personas relevadas.</div>
+    <div class="report-block"><strong>Demanda:</strong> estadía promedio ${number(avgNights,1)} noches y gasto medio ${money(avgSpend)}.</div>
+    <div class="report-block"><strong>Experiencia:</strong> satisfacción ${number(avgSatisfaction,1)}/5 y NPS ${number(nps)}.</div>
+    <div class="report-block"><strong>Oferta:</strong> ${number(activeLodgings.length)} alojamientos activos y ${number(beds)} plazas declaradas.</div>
   `;
+}
+
+function renderProfileForm() {
+  const municipality = state.municipality || {};
+  el.municipalityName.textContent = municipality.name || "—";
+  el.profileMunicipalityInput.value = municipality.name || "";
+  el.profileProvinceInput.value = municipality.province || "";
+  el.profileDepartmentInput.value = municipality.department || "";
+  el.profileEmailInput.value = municipality.public_contact_email || "";
 }
 
 function renderAll() {
@@ -298,263 +278,272 @@ function renderAll() {
   renderProfileForm();
 }
 
-function renderProfileForm() {
-  const muniName = state.municipality?.name || "";
-  document.getElementById("municipalityName").textContent = muniName || "—";
-  el.profileMunicipalityInput.value = muniName;
-  el.profileProvinceInput.value = state.municipality?.province || "";
-  el.profileDepartmentInput.value = state.municipality?.department || "";
-  el.profileEmailInput.value = state.municipality?.public_contact_email || "";
+async function fetchProfile() {
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("id, municipality_id, role")
+    .eq("id", state.user.id)
+    .single();
+  if (error) throw error;
+  state.profile = data;
+
+  const { data: municipality, error: municipalityError } = await supabaseClient
+    .from("municipalities")
+    .select("*")
+    .eq("id", data.municipality_id)
+    .single();
+  if (municipalityError) throw municipalityError;
+  state.municipality = municipality;
+}
+
+async function fetchSurveyResponses() {
+  const { data, error } = await supabaseClient
+    .from("survey_responses")
+    .select("*")
+    .eq("municipality_id", state.profile.municipality_id)
+    .order("visit_date", { ascending: false });
+  if (error) throw error;
+  state.surveyResponses = data || [];
+}
+
+async function fetchLodgingInventory() {
+  const { data, error } = await supabaseClient
+    .from("lodging_inventory")
+    .select("*")
+    .eq("municipality_id", state.profile.municipality_id)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  state.lodgingInventory = data || [];
+}
+
+async function syncAll(showMessage = false) {
+  if (!state.user) return;
+  try {
+    await fetchProfile();
+    await Promise.all([fetchSurveyResponses(), fetchLodgingInventory()]);
+    renderAll();
+    if (showMessage) showToast("Datos sincronizados.");
+  } catch (error) {
+    console.error(error);
+    showToast(`No se pudo sincronizar: ${error.message || "error desconocido"}`);
+  }
 }
 
 async function fetchSessionAndData() {
   if (!supabaseClient) return;
   const { data: { session } } = await supabaseClient.auth.getSession();
   state.user = session?.user || null;
-
   if (!state.user) {
+    state.profile = null;
+    state.municipality = null;
+    state.surveyResponses = [];
+    state.lodgingInventory = [];
     el.authScreen.classList.remove("hidden");
     el.appContent.classList.add("hidden");
     return;
   }
-
   el.authScreen.classList.add("hidden");
   el.appContent.classList.remove("hidden");
-
-  await fetchProfile();
-  await Promise.all([fetchSurveyResponses(), fetchLodgingInventory()]);
-  renderAll();
+  await syncAll(false);
 }
 
-async function fetchProfile() {
-  const { data, error } = await supabaseClient
-    .from("profiles")
-    .select("id, municipality_id, role, municipalities(*)")
-    .eq("id", state.user.id)
-    .single();
-
-  if (error) {
-    console.error(error);
-    showToast("No se pudo cargar el perfil.");
-    return;
-  }
-
-  state.profile = data;
-  state.municipality = data.municipalities;
-}
-
-async function fetchSurveyResponses() {
-  const municipalityId = state.profile?.municipality_id;
-  if (!municipalityId) return;
-
-  const { data, error } = await supabaseClient
-    .from("survey_responses")
-    .select("*")
-    .eq("municipality_id", municipalityId)
-    .order("visit_date", { ascending: false });
-
-  if (error) {
-    console.error(error);
-    showToast("No se pudieron cargar las encuestas.");
-    return;
-  }
-
-  state.surveyResponses = data || [];
-}
-
-async function fetchLodgingInventory() {
-  const municipalityId = state.profile?.municipality_id;
-  if (!municipalityId) return;
-
-  const { data, error } = await supabaseClient
-    .from("lodging_inventory")
-    .select("*")
-    .eq("municipality_id", municipalityId)
-    .order("name", { ascending: true });
-
-  if (error) {
-    console.error(error);
-    showToast("No se pudo cargar el inventario de alojamientos.");
-    return;
-  }
-
-  state.lodgingInventory = data || [];
+function normalizeSurveyPayload(payload) {
+  return {
+    municipality_id: state.profile.municipality_id,
+    municipality_name: payload.municipio.trim(),
+    province_label: payload.provincia,
+    visit_date: payload.fecha,
+    origin_place: payload.origen.trim(),
+    group_size: Number(payload.grupo || 0),
+    nights: Number(payload.noches || 0),
+    lodging_type: payload.alojamiento,
+    purpose: payload.motivo,
+    transport_mode: payload.transporte,
+    capture_channel: payload.canal,
+    estimated_spend_ars: Number(payload.gasto || 0),
+    satisfaction: Number(payload.satisfaccion || 0),
+    recommendation: Number(payload.recomendacion || 0),
+    notes: payload.mejora?.trim() || null,
+  };
 }
 
 async function handleLogin(event) {
   event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const email = form.get("email");
-  const password = form.get("password");
-
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) {
-    showToast(error.message);
-    return;
+  const btn = document.getElementById("loginSubmitBtn");
+  setButtonBusy(btn, true, "Ingresando...", "Ingresar");
+  try {
+    const form = new FormData(event.currentTarget);
+    const email = form.get("email");
+    const password = form.get("password");
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    showToast("Sesión iniciada.");
+    await fetchSessionAndData();
+  } catch (error) {
+    console.error(error);
+    showToast(error.message?.includes("fetch") ? "No se pudo conectar con Supabase. Revisá URL, key o red." : (error.message || "No se pudo iniciar sesión."));
+  } finally {
+    setButtonBusy(btn, false, "Ingresando...", "Ingresar");
   }
-  showToast("Sesión iniciada.");
-  await fetchSessionAndData();
 }
 
 async function handleSignup(event) {
   event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const payload = {
-    municipality_name: form.get("municipality_name"),
-    email: form.get("email"),
-    password: form.get("password"),
-  };
-
-  const { data, error } = await supabaseClient.auth.signUp({
-    email: payload.email,
-    password: payload.password,
-    options: {
-      data: {
-        municipality_name: payload.municipality_name,
-      }
-    }
-  });
-
-  if (error) {
-    showToast(error.message);
-    return;
-  }
-
-  showToast("Cuenta creada. Revisá el email si activaste confirmación.");
-  if (data?.user) {
-    await fetchSessionAndData();
+  const btn = document.getElementById("signupSubmitBtn");
+  setButtonBusy(btn, true, "Creando...", "Crear municipio");
+  try {
+    const form = new FormData(event.currentTarget);
+    const { error, data } = await supabaseClient.auth.signUp({
+      email: form.get("email"),
+      password: form.get("password"),
+      options: { data: { municipality_name: form.get("municipality_name") } }
+    });
+    if (error) throw error;
+    showToast("Cuenta creada. Revisá el email si activaste confirmación.");
+    if (data?.user) await fetchSessionAndData();
+  } catch (error) {
+    console.error(error);
+    showToast(error.message?.includes("fetch") ? "No se pudo conectar con Supabase. Revisá URL, key o red." : (error.message || "No se pudo crear la cuenta."));
+  } finally {
+    setButtonBusy(btn, false, "Creando...", "Crear municipio");
   }
 }
 
 async function handleLogout() {
-  const { error } = await supabaseClient.auth.signOut();
-  if (error) {
-    showToast(error.message);
-    return;
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) throw error;
+    document.getElementById("sidebar").classList.remove("open");
+    setActiveView("dashboard");
+    await fetchSessionAndData();
+    showToast("Sesión cerrada.");
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "No se pudo cerrar la sesión.");
   }
-  state.user = null;
-  state.profile = null;
-  state.municipality = null;
-  state.surveyResponses = [];
-  state.lodgingInventory = [];
-  el.authScreen.classList.remove("hidden");
-  el.appContent.classList.add("hidden");
 }
 
 async function handleSurveySubmit(event) {
   event.preventDefault();
-  const formData = new FormData(event.currentTarget);
-  const payload = Object.fromEntries(formData.entries());
-  payload.municipality_id = state.profile.municipality_id;
-  payload.group_size = Number(payload.group_size || 0);
-  payload.nights = Number(payload.nights || 0);
-  payload.estimated_spend_ars = Number(payload.estimated_spend_ars || 0);
-
-  const { error } = await supabaseClient.from("survey_responses").insert(payload);
-  if (error) {
-    showToast(error.message);
-    return;
+  const btn = document.getElementById("saveSurveyBtn");
+  setButtonBusy(btn, true, "Guardando...", "Guardar relevamiento");
+  try {
+    const form = new FormData(event.currentTarget);
+    const payload = normalizeSurveyPayload(Object.fromEntries(form.entries()));
+    const { error } = await supabaseClient.from("survey_responses").insert(payload);
+    if (error) throw error;
+    event.currentTarget.reset();
+    document.getElementById("fecha").value = new Date().toISOString().slice(0, 10);
+    showToast("Relevamiento guardado.");
+    await syncAll(false);
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "No se pudo guardar la encuesta.");
+  } finally {
+    setButtonBusy(btn, false, "Guardando...", "Guardar relevamiento");
   }
-
-  event.currentTarget.reset();
-  event.currentTarget.visit_date.valueAsDate = new Date();
-  showToast("Encuesta guardada.");
-  await fetchSurveyResponses();
-  renderAll();
 }
 
 async function handleLodgingSubmit(event) {
   event.preventDefault();
-  const formData = new FormData(event.currentTarget);
-  const payload = Object.fromEntries(formData.entries());
-  payload.municipality_id = state.profile.municipality_id;
-  payload.units = Number(payload.units || 0);
-  payload.beds = Number(payload.beds || 0);
-  payload.is_active = payload.is_active === "true";
-
-  const { error } = await supabaseClient.from("lodging_inventory").insert(payload);
-  if (error) {
-    showToast(error.message);
-    return;
+  const btn = document.getElementById("saveLodgingBtn");
+  setButtonBusy(btn, true, "Guardando...", "Guardar alojamiento");
+  try {
+    const form = new FormData(event.currentTarget);
+    const payload = Object.fromEntries(form.entries());
+    payload.municipality_id = state.profile.municipality_id;
+    payload.units = Number(payload.units || 0);
+    payload.beds = Number(payload.beds || 0);
+    payload.is_active = payload.is_active === "true";
+    const { error } = await supabaseClient.from("lodging_inventory").insert(payload);
+    if (error) throw error;
+    event.currentTarget.reset();
+    showToast("Alojamiento guardado.");
+    await syncAll(false);
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "No se pudo guardar el alojamiento.");
+  } finally {
+    setButtonBusy(btn, false, "Guardando...", "Guardar alojamiento");
   }
-
-  event.currentTarget.reset();
-  showToast("Alojamiento guardado.");
-  await fetchLodgingInventory();
-  renderAll();
 }
 
 async function handleProfileSubmit(event) {
   event.preventDefault();
-  const formData = new FormData(event.currentTarget);
-  const payload = Object.fromEntries(formData.entries());
-
-  const { error } = await supabaseClient
-    .from("municipalities")
-    .update(payload)
-    .eq("id", state.profile.municipality_id);
-
-  if (error) {
-    showToast(error.message);
-    return;
+  const btn = document.getElementById("saveProfileBtn");
+  setButtonBusy(btn, true, "Guardando...", "Guardar cambios");
+  try {
+    const form = new FormData(event.currentTarget);
+    const payload = Object.fromEntries(form.entries());
+    const { error } = await supabaseClient.from("municipalities").update(payload).eq("id", state.profile.municipality_id);
+    if (error) throw error;
+    showToast("Configuración actualizada.");
+    await syncAll(false);
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "No se pudieron guardar los cambios.");
+  } finally {
+    setButtonBusy(btn, false, "Guardando...", "Guardar cambios");
   }
-
-  state.municipality = { ...state.municipality, ...payload };
-  renderProfileForm();
-  showToast("Configuración actualizada.");
 }
 
 async function seedDemoData() {
-  if (!state.profile?.municipality_id) {
-    showToast("Primero iniciá sesión.");
-    return;
+  if (!state.profile?.municipality_id) return showToast("Primero iniciá sesión.");
+  try {
+    const municipality_id = state.profile.municipality_id;
+    const municipality_name = state.municipality?.name || "Municipio demo";
+    const province_label = state.municipality?.province || "Córdoba";
+    const surveySeed = [
+      { municipality_id, municipality_name, province_label, visit_date: '2026-03-01', origin_place: 'Rosario', group_size: 4, nights: 3, lodging_type: 'Cabaña', purpose: 'Fin de semana', transport_mode: 'Auto', capture_channel: 'Redes sociales', estimated_spend_ars: 240000, satisfaction: 5, recommendation: 10, notes: 'Más cartelería en senderos' },
+      { municipality_id, municipality_name, province_label, visit_date: '2026-03-02', origin_place: 'CABA', group_size: 2, nights: 2, lodging_type: 'Hotel', purpose: 'Vacaciones', transport_mode: 'Ómnibus', capture_channel: 'Google / Web', estimated_spend_ars: 180000, satisfaction: 4, recommendation: 9, notes: 'Más eventos nocturnos' },
+      { municipality_id, municipality_name, province_label, visit_date: '2026-03-05', origin_place: 'San Juan', group_size: 3, nights: 0, lodging_type: 'Excursión sin pernocte', purpose: 'Evento', transport_mode: 'Auto', capture_channel: 'Recomendación', estimated_spend_ars: 95000, satisfaction: 4, recommendation: 8, notes: 'Mejorar baños públicos' },
+      { municipality_id, municipality_name, province_label, visit_date: '2026-03-08', origin_place: 'Mendoza', group_size: 5, nights: 4, lodging_type: 'Alquiler temporario', purpose: 'Vacaciones', transport_mode: 'Auto', capture_channel: 'Ya conocía el lugar', estimated_spend_ars: 420000, satisfaction: 5, recommendation: 10, notes: 'Más actividades para niños' },
+      { municipality_id, municipality_name, province_label, visit_date: '2026-03-09', origin_place: 'Chile', group_size: 2, nights: 3, lodging_type: 'Hotel', purpose: 'Gastronomía', transport_mode: 'Avión', capture_channel: 'Redes sociales', estimated_spend_ars: 320000, satisfaction: 3, recommendation: 6, notes: 'Mejor conectividad de internet' },
+    ];
+    const lodgingSeed = [
+      { municipality_id, name: 'Hotel Plaza Centro', category: 'Hotel', units: 24, beds: 58, contact_name: 'Recepción', is_active: true },
+      { municipality_id, name: 'Cabañas La Ribera', category: 'Cabaña', units: 10, beds: 36, contact_name: 'Administración', is_active: true },
+      { municipality_id, name: 'Camping Municipal', category: 'Camping', units: 40, beds: 80, contact_name: 'Turismo', is_active: true },
+    ];
+    const { error: surveyError } = await supabaseClient.from("survey_responses").insert(surveySeed);
+    if (surveyError) throw surveyError;
+    const { error: lodgingError } = await supabaseClient.from("lodging_inventory").insert(lodgingSeed);
+    if (lodgingError) throw lodgingError;
+    await syncAll(false);
+    showToast("Demo cargada.");
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "No se pudo cargar la demo.");
   }
+}
 
-  const municipality_id = state.profile.municipality_id;
-  const today = new Date();
-  const monthString = (offset) => {
-    const d = new Date(today.getFullYear(), today.getMonth() - offset, 14);
-    return d.toISOString().slice(0, 10);
-  };
-
-  const surveySeed = [
-    { municipality_id, visit_date: monthString(0), capture_channel: "QR", origin_place: "CABA", group_size: 2, purpose: "Vacaciones", nights: 3, lodging_type: "Hotel", estimated_spend_ars: 180000, activities: "Gastronomía y paseo costero" },
-    { municipality_id, visit_date: monthString(0), capture_channel: "Evento", origin_place: "Rosario", group_size: 4, purpose: "Evento", nights: 1, lodging_type: "Cabaña", estimated_spend_ars: 240000, activities: "Festival local" },
-    { municipality_id, visit_date: monthString(1), capture_channel: "Punto de informes", origin_place: "La Plata", group_size: 3, purpose: "Vacaciones", nights: 2, lodging_type: "Hotel", estimated_spend_ars: 150000, activities: "Termas y gastronomía" },
-    { municipality_id, visit_date: monthString(1), capture_channel: "Encuestador", origin_place: "Córdoba", group_size: 2, purpose: "Trabajo / negocios", nights: 1, lodging_type: "Hotel", estimated_spend_ars: 98000, activities: "Reuniones y cena" },
-    { municipality_id, visit_date: monthString(2), capture_channel: "QR", origin_place: "Mar del Plata", group_size: 5, purpose: "Visita a familiares/amigos", nights: 4, lodging_type: "Casa de familiares/amigos", estimated_spend_ars: 210000, activities: "Visita familiar y paseo" },
-  ];
-
-  const lodgingSeed = [
-    { municipality_id, name: "Hotel Plaza Centro", category: "Hotel", units: 24, beds: 58, contact_name: "Recepción", is_active: true },
-    { municipality_id, name: "Cabañas La Ribera", category: "Cabaña", units: 10, beds: 36, contact_name: "Administración", is_active: true },
-    { municipality_id, name: "Camping Municipal", category: "Camping", units: 40, beds: 80, contact_name: "Turismo", is_active: true },
-  ];
-
-  const { error: sErr } = await supabaseClient.from("survey_responses").insert(surveySeed);
-  if (sErr) {
-    showToast(sErr.message);
-    return;
+async function clearDemoData() {
+  if (!state.profile?.municipality_id) return showToast("Primero iniciá sesión.");
+  const ok = window.confirm("Se eliminarán las encuestas y alojamientos demo de este municipio. Esta acción no se puede deshacer.");
+  if (!ok) return;
+  try {
+    const municipalityId = state.profile.municipality_id;
+    const { error: surveyError } = await supabaseClient.from("survey_responses").delete().eq("municipality_id", municipalityId);
+    if (surveyError) throw surveyError;
+    const { error: lodgingError } = await supabaseClient.from("lodging_inventory").delete().eq("municipality_id", municipalityId);
+    if (lodgingError) throw lodgingError;
+    await syncAll(false);
+    showToast("Base demo eliminada.");
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "No se pudo borrar la demo.");
   }
-  const { error: lErr } = await supabaseClient.from("lodging_inventory").insert(lodgingSeed);
-  if (lErr) {
-    showToast(lErr.message);
-    return;
-  }
-
-  await Promise.all([fetchSurveyResponses(), fetchLodgingInventory()]);
-  renderAll();
-  showToast("Demo cargada.");
 }
 
 function exportSurveyCsv() {
   const rows = getFilteredSurveyResponses();
-  const headers = ["visit_date","capture_channel","origin_place","group_size","purpose","nights","lodging_type","estimated_spend_ars","activities","notes"];
-  const csv = [headers.join(",")]
-    .concat(rows.map(row => headers.map(h => `"${String(row[h] ?? "").replaceAll('"','""')}"`).join(",")))
-    .join("\n");
-
+  const headers = ["visit_date","municipality_name","province_label","origin_place","group_size","nights","lodging_type","purpose","transport_mode","capture_channel","estimated_spend_ars","satisfaction","recommendation","notes"];
+  const csv = [headers.join(",")].concat(rows.map(row => headers.map(h => `"${String(row[h] ?? "").replaceAll('"','""')}"`).join(","))).join("\n");
   downloadFile("encuestas_turisticas.csv", csv, "text/csv;charset=utf-8;");
+}
+
+function exportSurveyJson() {
+  downloadFile("encuestas_turisticas.json", JSON.stringify(getFilteredSurveyResponses(), null, 2), "application/json");
 }
 
 function downloadReportJson() {
@@ -563,12 +552,6 @@ function downloadReportJson() {
     generated_at: new Date().toISOString(),
     municipality: state.municipality,
     filters: state.filters,
-    metrics: {
-      visitors: rows.length,
-      avg_nights: rows.length ? rows.reduce((sum, row) => sum + Number(row.nights || 0), 0) / rows.length : 0,
-      avg_spend_ars: rows.length ? rows.reduce((sum, row) => sum + Number(row.estimated_spend_ars || 0), 0) / rows.length : 0,
-      beds_active: state.lodgingInventory.filter(x => x.is_active).reduce((sum, row) => sum + Number(row.beds || 0), 0),
-    },
     survey_responses: rows,
     lodging_inventory: state.lodgingInventory,
   };
@@ -576,28 +559,13 @@ function downloadReportJson() {
 }
 
 function bindFilters() {
-  el.filterStartDate.addEventListener("change", (e) => {
-    state.filters.startDate = e.target.value;
-    renderAll();
-  });
-  el.filterEndDate.addEventListener("change", (e) => {
-    state.filters.endDate = e.target.value;
-    renderAll();
-  });
-  el.filterOrigin.addEventListener("change", (e) => {
-    state.filters.origin = e.target.value;
-    renderAll();
-  });
-  el.filterPurpose.addEventListener("change", (e) => {
-    state.filters.purpose = e.target.value;
-    renderAll();
-  });
+  el.filterStartDate.addEventListener("change", (e) => { state.filters.startDate = e.target.value; renderAll(); });
+  el.filterEndDate.addEventListener("change", (e) => { state.filters.endDate = e.target.value; renderAll(); });
+  el.filterOrigin.addEventListener("change", (e) => { state.filters.origin = e.target.value; renderAll(); });
+  el.filterPurpose.addEventListener("change", (e) => { state.filters.purpose = e.target.value; renderAll(); });
   document.getElementById("clearFiltersBtn").addEventListener("click", () => {
     state.filters = { startDate: "", endDate: "", origin: "", purpose: "" };
-    el.filterStartDate.value = "";
-    el.filterEndDate.value = "";
-    el.filterOrigin.value = "";
-    el.filterPurpose.value = "";
+    el.filterStartDate.value = ""; el.filterEndDate.value = ""; el.filterOrigin.value = ""; el.filterPurpose.value = "";
     renderAll();
   });
 }
@@ -610,14 +578,13 @@ function bindUi() {
   document.getElementById("lodgingForm").addEventListener("submit", handleLodgingSubmit);
   document.getElementById("profileForm").addEventListener("submit", handleProfileSubmit);
   document.getElementById("seedDemoBtn").addEventListener("click", seedDemoData);
-  document.getElementById("syncBtn").addEventListener("click", async () => {
-    await Promise.all([fetchSurveyResponses(), fetchLodgingInventory()]);
-    renderAll();
-    showToast("Datos sincronizados.");
-  });
+  document.getElementById("clearDemoBtn").addEventListener("click", clearDemoData);
+  document.getElementById("syncBtn").addEventListener("click", () => syncAll(true));
   document.getElementById("exportSurveyCsvBtn").addEventListener("click", exportSurveyCsv);
+  document.getElementById("exportSurveyJsonBtn").addEventListener("click", exportSurveyJson);
   document.getElementById("downloadReportJsonBtn").addEventListener("click", downloadReportJson);
   document.getElementById("printReportBtn").addEventListener("click", () => window.print());
+  el.backToDashboardBtn.addEventListener("click", () => setActiveView("dashboard"));
 
   document.querySelectorAll(".nav-link").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -625,25 +592,15 @@ function bindUi() {
       document.getElementById("sidebar").classList.remove("open");
     });
   });
-
-  document.getElementById("menuBtn").addEventListener("click", () => {
-    document.getElementById("sidebar").classList.toggle("open");
-  });
-
+  document.getElementById("menuBtn").addEventListener("click", () => document.getElementById("sidebar").classList.toggle("open"));
   bindFilters();
 }
 
 async function startApp() {
   bindUi();
-  document.querySelector('input[name="visit_date"]').valueAsDate = new Date();
-
-  const ready = initSupabase();
-  if (!ready) return;
-
-  supabaseClient.auth.onAuthStateChange(async () => {
-    await fetchSessionAndData();
-  });
-
+  document.getElementById("fecha").value = new Date().toISOString().slice(0, 10);
+  if (!initSupabase()) return;
+  supabaseClient.auth.onAuthStateChange(async () => { await fetchSessionAndData(); });
   await fetchSessionAndData();
 }
 
