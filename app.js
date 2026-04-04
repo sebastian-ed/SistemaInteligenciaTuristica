@@ -396,7 +396,8 @@ async function handleLogin(event) {
   const btn = document.getElementById("loginSubmitBtn");
   setButtonBusy(btn, true, "Ingresando...", "Ingresar");
   try {
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "");
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
@@ -461,18 +462,20 @@ async function handleLogout() {
 
 async function handleSurveySubmit(event) {
   event.preventDefault();
+  const formEl = event.currentTarget;
   const btn = document.getElementById("saveSurveyBtn");
   setButtonBusy(btn, true, "Guardando...", "Guardar relevamiento");
   try {
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formEl);
     const payload = normalizeSurveyPayload(Object.fromEntries(form.entries()));
     const validationError = validateSurveyPayload(payload);
     if (validationError) throw new Error(validationError);
 
     const { error } = await supabaseClient.from("survey_responses").insert(payload);
     if (error) throw error;
-    event.currentTarget.reset();
-    document.getElementById("fecha").value = new Date().toISOString().slice(0, 10);
+    formEl.reset();
+    const fechaInput = document.getElementById("fecha");
+    if (fechaInput) fechaInput.value = new Date().toISOString().slice(0, 10);
     if (!document.getElementById("municipio").value && state.municipality?.name) {
       document.getElementById("municipio").value = state.municipality.name;
     }
@@ -494,7 +497,8 @@ async function handleLodgingSubmit(event) {
   const btn = document.getElementById("saveLodgingBtn");
   setButtonBusy(btn, true, "Guardando...", "Guardar alojamiento");
   try {
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     const payload = Object.fromEntries(form.entries());
     payload.municipality_id = state.profile.municipality_id;
     payload.name = String(payload.name || "").trim();
@@ -511,7 +515,7 @@ async function handleLodgingSubmit(event) {
 
     const { error } = await supabaseClient.from("lodging_inventory").insert(payload);
     if (error) throw error;
-    event.currentTarget.reset();
+    formEl.reset();
     showToast("Alojamiento guardado.");
     await syncAll(false);
   } catch (error) {
