@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="data:,">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="./supabase.js"></script>
@@ -191,12 +192,12 @@
               <form id="surveyForm" class="form-grid">
                 <label>
                   Municipio
-                  <input type="text" id="municipio" placeholder="Ej. Villa General Belgrano" required />
+                  <input type="text" id="municipio" name="municipio" placeholder="Ej. Villa General Belgrano" required />
                 </label>
 
                 <label>
                   Provincia
-                  <select id="provincia" required>
+                  <select id="provincia" name="provincia" required>
                     <option value="">Seleccionar</option>
                     <option>Buenos Aires</option><option>CABA</option><option>Catamarca</option><option>Chaco</option><option>Chubut</option><option>Córdoba</option><option>Corrientes</option><option>Entre Ríos</option><option>Formosa</option><option>Jujuy</option><option>La Pampa</option><option>La Rioja</option><option>Mendoza</option><option>Misiones</option><option>Neuquén</option><option>Río Negro</option><option>Salta</option><option>San Juan</option><option>San Luis</option><option>Santa Cruz</option><option>Santa Fe</option><option>Santiago del Estero</option><option>Tierra del Fuego</option><option>Tucumán</option>
                   </select>
@@ -204,27 +205,27 @@
 
                 <label>
                   Fecha de relevamiento
-                  <input type="date" id="fecha" required />
+                  <input type="date" id="fecha" name="fecha" required />
                 </label>
 
                 <label>
                   Origen del visitante
-                  <input type="text" id="origen" placeholder="Ej. Rosario / Chile / CABA" required />
+                  <input type="text" id="origen" name="origen" placeholder="Ej. Rosario / Chile / CABA" required />
                 </label>
 
                 <label>
                   Cantidad de personas del grupo
-                  <input type="number" id="grupo" min="1" value="1" required />
+                  <input type="number" id="grupo" name="grupo" min="1" value="1" required />
                 </label>
 
                 <label>
                   Cantidad de noches
-                  <input type="number" id="noches" min="0" value="0" required />
+                  <input type="number" id="noches" name="noches" min="0" value="0" required />
                 </label>
 
                 <label>
                   Tipo de alojamiento
-                  <select id="alojamiento" required>
+                  <select id="alojamiento" name="alojamiento" required>
                     <option value="">Seleccionar</option>
                     <option>Hotel</option><option>Cabaña</option><option>Hostel</option><option>Casa de familiares/amigos</option><option>Camping</option><option>Alquiler temporario</option><option>Excursión sin pernocte</option><option>Otro</option>
                   </select>
@@ -232,7 +233,7 @@
 
                 <label>
                   Motivo del viaje
-                  <select id="motivo" required>
+                  <select id="motivo" name="motivo" required>
                     <option value="">Seleccionar</option>
                     <option>Vacaciones</option><option>Fin de semana</option><option>Evento</option><option>Trabajo</option><option>Visita a familiares/amigos</option><option>Deporte</option><option>Gastronomía</option><option>Otro</option>
                   </select>
@@ -240,7 +241,7 @@
 
                 <label>
                   Medio de transporte
-                  <select id="transporte" required>
+                  <select id="transporte" name="transporte" required>
                     <option value="">Seleccionar</option>
                     <option>Auto</option><option>Ómnibus</option><option>Avión</option><option>Moto</option><option>Bicicleta</option><option>Motorhome</option><option>Otro</option>
                   </select>
@@ -248,7 +249,7 @@
 
                 <label>
                   Cómo conoció el destino
-                  <select id="canal" required>
+                  <select id="canal" name="canal" required>
                     <option value="">Seleccionar</option>
                     <option>Redes sociales</option><option>Recomendación</option><option>Google / Web</option><option>Publicidad oficial</option><option>Agencia</option><option>Ya conocía el lugar</option><option>Otro</option>
                   </select>
@@ -256,12 +257,12 @@
 
                 <label>
                   Gasto estimado del grupo (ARS)
-                  <input type="number" id="gasto" min="0" step="1000" placeholder="Ej. 150000" required />
+                  <input type="number" id="gasto" name="gasto" min="0" step="1000" placeholder="Ej. 150000" required />
                 </label>
 
                 <label>
                   Satisfacción general (1 a 5)
-                  <select id="satisfaccion" required>
+                  <select id="satisfaccion" name="satisfaccion" required>
                     <option value="">Seleccionar</option>
                     <option value="1">1 - Muy mala</option><option value="2">2 - Mala</option><option value="3">3 - Regular</option><option value="4">4 - Buena</option><option value="5">5 - Muy buena</option>
                   </select>
@@ -269,12 +270,12 @@
 
                 <label>
                   Recomendación del destino (0 a 10)
-                  <input type="number" id="recomendacion" min="0" max="10" value="8" required />
+                  <input type="number" id="recomendacion" name="recomendacion" min="0" max="10" value="8" required />
                 </label>
 
                 <label class="full-width">
                   Qué debería mejorar el municipio
-                  <textarea id="mejora" rows="4" placeholder="Ej. más señalética, baños públicos, mejor conectividad, eventos, limpieza, etc."></textarea>
+                  <textarea id="mejora" name="mejora" rows="4" placeholder="Ej. más señalética, baños públicos, mejor conectividad, eventos, limpieza, etc."></textarea>
                 </label>
 
                 <div class="full-width form-actions">

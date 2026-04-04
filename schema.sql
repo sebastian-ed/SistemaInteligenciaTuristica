@@ -26,12 +26,17 @@ create table if not exists public.survey_responses (
   municipality_id uuid not null references public.municipalities(id) on delete cascade,
   visit_date date not null,
   capture_channel text not null,
+  municipality_name text,
+  province_label text,
   origin_place text not null,
   group_size integer not null default 1 check (group_size > 0),
   purpose text not null,
   nights integer not null default 0 check (nights >= 0),
   lodging_type text not null,
+  transport_mode text,
   estimated_spend_ars numeric(14,2) not null default 0 check (estimated_spend_ars >= 0),
+  satisfaction integer not null default 0,
+  recommendation integer not null default 0,
   activities text,
   notes text,
   created_at timestamptz not null default now()
@@ -39,6 +44,14 @@ create table if not exists public.survey_responses (
 
 create index if not exists idx_survey_responses_municipality_id on public.survey_responses(municipality_id);
 create index if not exists idx_survey_responses_visit_date on public.survey_responses(visit_date);
+
+-- PATCH PARA BASES YA EXISTENTES
+alter table public.survey_responses add column if not exists municipality_name text;
+alter table public.survey_responses add column if not exists province_label text;
+alter table public.survey_responses add column if not exists transport_mode text;
+alter table public.survey_responses add column if not exists satisfaction integer not null default 0;
+alter table public.survey_responses add column if not exists recommendation integer not null default 0;
+
 
 -- ALOJAMIENTOS
 create table if not exists public.lodging_inventory (

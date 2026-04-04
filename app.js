@@ -267,6 +267,10 @@ function renderProfileForm() {
   el.profileProvinceInput.value = municipality.province || "";
   el.profileDepartmentInput.value = municipality.department || "";
   el.profileEmailInput.value = municipality.public_contact_email || "";
+  const municipalityInput = document.getElementById("municipio");
+  const provinceInput = document.getElementById("provincia");
+  if (municipalityInput && !municipalityInput.value && municipality.name) municipalityInput.value = municipality.name;
+  if (provinceInput && !provinceInput.value && municipality.province) provinceInput.value = municipality.province;
 }
 
 function renderAll() {
@@ -348,23 +352,43 @@ async function fetchSessionAndData() {
 }
 
 function normalizeSurveyPayload(payload) {
+  const safe = (value) => String(value ?? "").trim();
+  const municipalityName = safe(payload.municipio) || safe(state.municipality?.name);
+  const provinceLabel = safe(payload.provincia) || safe(state.municipality?.province);
+
   return {
     municipality_id: state.profile.municipality_id,
-    municipality_name: payload.municipio.trim(),
-    province_label: payload.provincia,
+    municipality_name: municipalityName || null,
+    province_label: provinceLabel || null,
     visit_date: payload.fecha,
-    origin_place: payload.origen.trim(),
+    origin_place: safe(payload.origen),
     group_size: Number(payload.grupo || 0),
     nights: Number(payload.noches || 0),
-    lodging_type: payload.alojamiento,
-    purpose: payload.motivo,
-    transport_mode: payload.transporte,
-    capture_channel: payload.canal,
+    lodging_type: safe(payload.alojamiento),
+    purpose: safe(payload.motivo),
+    transport_mode: safe(payload.transporte) || null,
+    capture_channel: safe(payload.canal) || null,
     estimated_spend_ars: Number(payload.gasto || 0),
     satisfaction: Number(payload.satisfaccion || 0),
     recommendation: Number(payload.recomendacion || 0),
-    notes: payload.mejora?.trim() || null,
+    activities: null,
+    notes: safe(payload.mejora) || null,
   };
+}
+
+function validateSurveyPayload(payload) {
+  if (!payload.visit_date) return "Indicá la fecha del relevamiento.";
+  if (!payload.origin_place) return "Completá el origen del visitante.";
+  if (!payload.lodging_type) return "Seleccioná el tipo de alojamiento.";
+  if (!payload.purpose) return "Seleccioná el motivo del viaje.";
+  if (!payload.capture_channel) return "Seleccioná cómo conoció el destino.";
+  if (!payload.transport_mode) return "Seleccioná el medio de transporte.";
+  if (!payload.group_size || payload.group_size < 1) return "La cantidad de personas del grupo debe ser al menos 1.";
+  if (payload.nights < 0) return "La cantidad de noches no puede ser negativa.";
+  if (payload.estimated_spend_ars < 0) return "El gasto no puede ser negativo.";
+  if (!payload.satisfaction || payload.satisfaction < 1 || payload.satisfaction > 5) return "Seleccioná una satisfacción válida.";
+  if (payload.recommendation < 0 || payload.recommendation > 10) return "La recomendación debe estar entre 0 y 10.";
+  return null;
 }
 
 async function handleLogin(event) {
@@ -373,12 +397,11 @@ async function handleLogin(event) {
   setButtonBusy(btn, true, "Ingresando...", "Ingresar");
   try {
     const form = new FormData(event.currentTarget);
-    const email = form.get("email");
-    const password = form.get("password");
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "");
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
     showToast("Sesión iniciada.");
-    await fetchSessionAndData();
   } catch (error) {
     console.error(error);
     showToast(error.message?.includes("fetch") ? "No se pudo conectar con Supabase. Revisá URL, key o red." : (error.message || "No se pudo iniciar sesión."));
@@ -410,16 +433,29 @@ async function handleSignup(event) {
 }
 
 async function handleLogout() {
+  const btn = document.getElementById("logoutBtn");
+  setButtonBusy(btn, true, "Cerrando...", "Cerrar sesión");
   try {
-    const { error } = await supabaseClient.auth.signOut();
-    if (error) throw error;
+    state.user = null;
+    state.profile = null;
+    state.municipality = null;
+    state.surveyResponses = [];
+    state.lodgingInventory = [];
+    destroyCharts();
     document.getElementById("sidebar").classList.remove("open");
     setActiveView("dashboard");
-    await fetchSessionAndData();
+    el.appContent.classList.add("hidden");
+    el.authScreen.classList.remove("hidden");
+
+    const { error } = await supabaseClient.auth.signOut({ scope: "local" });
+    if (error) throw error;
+
     showToast("Sesión cerrada.");
   } catch (error) {
     console.error(error);
     showToast(error.message || "No se pudo cerrar la sesión.");
+  } finally {
+    setButtonBusy(btn, false, "Cerrando...", "Cerrar sesión");
   }
 }
 
@@ -430,10 +466,19 @@ async function handleSurveySubmit(event) {
   try {
     const form = new FormData(event.currentTarget);
     const payload = normalizeSurveyPayload(Object.fromEntries(form.entries()));
+    const validationError = validateSurveyPayload(payload);
+    if (validationError) throw new Error(validationError);
+
     const { error } = await supabaseClient.from("survey_responses").insert(payload);
     if (error) throw error;
     event.currentTarget.reset();
     document.getElementById("fecha").value = new Date().toISOString().slice(0, 10);
+    if (!document.getElementById("municipio").value && state.municipality?.name) {
+      document.getElementById("municipio").value = state.municipality.name;
+    }
+    if (!document.getElementById("provincia").value && state.municipality?.province) {
+      document.getElementById("provincia").value = state.municipality.province;
+    }
     showToast("Relevamiento guardado.");
     await syncAll(false);
   } catch (error) {
@@ -452,9 +497,18 @@ async function handleLodgingSubmit(event) {
     const form = new FormData(event.currentTarget);
     const payload = Object.fromEntries(form.entries());
     payload.municipality_id = state.profile.municipality_id;
+    payload.name = String(payload.name || "").trim();
+    payload.category = String(payload.category || "").trim();
+    payload.address = String(payload.address || "").trim() || null;
+    payload.contact_name = String(payload.contact_name || "").trim() || null;
+    payload.contact_phone = String(payload.contact_phone || "").trim() || null;
     payload.units = Number(payload.units || 0);
     payload.beds = Number(payload.beds || 0);
     payload.is_active = payload.is_active === "true";
+
+    if (!payload.name) throw new Error("Completá el nombre comercial del alojamiento.");
+    if (!payload.category) throw new Error("Seleccioná el tipo de alojamiento.");
+
     const { error } = await supabaseClient.from("lodging_inventory").insert(payload);
     if (error) throw error;
     event.currentTarget.reset();
@@ -600,7 +654,14 @@ async function startApp() {
   bindUi();
   document.getElementById("fecha").value = new Date().toISOString().slice(0, 10);
   if (!initSupabase()) return;
-  supabaseClient.auth.onAuthStateChange(async () => { await fetchSessionAndData(); });
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    state.user = session?.user || null;
+    window.setTimeout(() => {
+      fetchSessionAndData();
+    }, 0);
+  });
+
   await fetchSessionAndData();
 }
 

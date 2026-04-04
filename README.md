@@ -1,56 +1,50 @@
-# Observatorio Turístico Municipal · fusión v3
+# Observatorio Turístico Municipal · versión corregida
 
-Esta versión combina:
+Esta versión mantiene la arquitectura con Supabase y corrige los fallos reportados:
 
-- la **arquitectura con Supabase, login, RLS, vistas y multiusuario** del proyecto principal
-- la **calidad de la encuesta y la visualización de resultados** del segundo proyecto
-
-## Qué quedó fusionado
-
-- Autenticación con Supabase
-- Aislamiento por municipio con RLS
-- Dashboard con KPIs más claros
-- Encuesta ampliada con mejores campos y mejor presentación
-- Gráficos y hallazgos automáticos
-- Inventario de alojamientos y plazas
-- Reporte ejecutivo exportable
-- Botón para cargar demo y **botón real para borrarla**
-- Botón de sincronización
-- Botón para volver al dashboard
-- Mejor manejo de errores en login
+- cierre de sesión vuelve al acceso
+- encuesta guarda correctamente
+- alojamientos guardan correctamente
+- botón sincronizar recarga perfil, encuestas y alojamientos
+- botón borrar demo elimina demo del municipio actual
+- interfaz responsive y mobile-first
+- se elimina el error de `favicon.ico 404`
 
 ## Archivos
 
-- `index.html` → interfaz principal fusionada
-- `styles.css` → estilos responsive
-- `app.js` → lógica principal
-- `supabase.js` → credenciales del proyecto
-- `schema.sql` → base de datos y políticas RLS
-- `netlify.toml` → configuración básica de Netlify
+- `index.html`
+- `styles.css`
+- `app.js`
+- `supabase.js`
+- `schema.sql`
+- `netlify.toml`
 
-## Problemas corregidos respecto del proyecto base
+## Qué estaba mal y qué se corrigió
 
-### 1. Sincronizar
-No solo refresca encuestas y alojamientos. También vuelve a cargar perfil y municipio para evitar estados viejos.
+### 1) Error al guardar encuesta
+El formulario de encuestas tenía `id` pero no `name` en los campos. Por eso `FormData` devolvía valores faltantes y aparecía:
 
-### 2. Guardar cambios
-La configuración ahora actualiza `municipalities` con feedback visible y relectura del estado.
+`Cannot read properties of undefined (reading 'trim')`
 
-### 3. Cerrar sesión
-Limpia estado, oculta la app y vuelve al flujo de acceso.
+Ahora los campos tienen `name` y además `app.js` valida y normaliza los datos antes de insertar.
 
-### 4. Volver atrás
-Se agregó un botón `Volver al dashboard` cuando estás fuera de la vista principal.
+### 2) Logout no volvía al acceso
+Ahora `Cerrar sesión`:
+- limpia estado local
+- oculta la app
+- muestra la pantalla de acceso
+- cierra la sesión local en Supabase
+- vuelve al dashboard base
 
-### 5. Demo
-La demo ya no queda clavada sin salida. Ahora existe `Borrar demo`, que elimina encuestas y alojamientos del municipio actual.
+### 3) Guardado de alojamientos
+Se mejoró la sanitización del payload y el manejo del botón para que no quede pegado en `Guardando...`.
 
-### 6. Login con `Failed to fetch`
-No desaparece mágicamente si Supabase está mal configurado o caído, pero ahora el mensaje es más útil y menos idiota.
+### 4) Base demo
+Ahora existe `Borrar demo`, que elimina encuestas y alojamientos del municipio actual.
 
-## Importante sobre el esquema SQL
+## Importante sobre Supabase
 
-El frontend fusionado usa algunos campos adicionales en `survey_responses`:
+Esta app usa columnas adicionales en `public.survey_responses`:
 
 - `municipality_name`
 - `province_label`
@@ -58,26 +52,66 @@ El frontend fusionado usa algunos campos adicionales en `survey_responses`:
 - `satisfaction`
 - `recommendation`
 
-Agregá estas columnas si tu tabla original no las tiene.
+El `schema.sql` ya viene actualizado y además incluye un patch con `alter table ... add column if not exists ...` para bases ya existentes.
 
-### SQL sugerido
+## Qué tenés que hacer en Supabase
+
+### Opción A — ya tenés la base creada
+Ejecutá el `schema.sql` actualizado completo. No debería romper nada porque usa `if not exists` y agrega el patch de columnas faltantes.
+
+### Opción B — querés ser quirúrgico
+Corré solo este bloque:
 
 ```sql
 alter table public.survey_responses add column if not exists municipality_name text;
 alter table public.survey_responses add column if not exists province_label text;
 alter table public.survey_responses add column if not exists transport_mode text;
-alter table public.survey_responses add column if not exists satisfaction integer default 0;
-alter table public.survey_responses add column if not exists recommendation integer default 0;
+alter table public.survey_responses add column if not exists satisfaction integer not null default 0;
+alter table public.survey_responses add column if not exists recommendation integer not null default 0;
 ```
 
-## Deploy
+## Qué tenés que hacer en `supabase.js`
 
-### GitHub Pages
-Subí todos los archivos al root del repo y publicá la rama principal.
+Revisá que tenga tus credenciales reales del proyecto:
 
-### Netlify
-No requiere build. Publish directory: `.`
+```js
+window.SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
+window.SUPABASE_ANON_KEY = "TU-KEY-PUBLICA";
+```
 
-## Observación de negocio
+## Qué tenés que hacer en VS Code / CMD
 
-No lo vendas como "formulario". Vendelo como **tablero operativo de inteligencia turística local**. Nadie asigna presupuesto serio a una encuesta suelta. Sí a un sistema que produce lectura ejecutiva.
+No necesitás compilar nada.
+
+### Para probar local
+Podés usar:
+
+```bash
+python -m http.server 8080
+```
+
+Después abrí:
+
+```bash
+http://localhost:8080
+```
+
+## Cómo subir a GitHub Pages
+
+1. Creá un repo nuevo en GitHub.
+2. Subí estos archivos al root.
+3. En GitHub: `Settings > Pages`.
+4. Elegí `Deploy from a branch`.
+5. Seleccioná `main` y carpeta `/root`.
+6. Guardá.
+
+## Netlify
+
+No requiere build. `netlify.toml` ya está incluido.
+
+## Nota final
+
+Si después de esto falla algo, ya no va a ser por los errores reportados arriba. Lo más probable sería:
+- credenciales de Supabase incorrectas
+- RLS bloqueando una operación
+- cache o locks viejos del navegador
