@@ -51,6 +51,8 @@ alter table public.survey_responses add column if not exists province_label text
 alter table public.survey_responses add column if not exists transport_mode text;
 alter table public.survey_responses add column if not exists satisfaction integer not null default 0;
 alter table public.survey_responses add column if not exists recommendation integer not null default 0;
+-- Nuevas columnas v2 (comportamiento turista)
+alter table public.survey_responses add column if not exists activities text;
 
 
 -- ALOJAMIENTOS

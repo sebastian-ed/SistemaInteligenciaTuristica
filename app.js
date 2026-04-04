@@ -245,7 +245,48 @@ function renderKpisAndInsights() {
     `Se relevaron ${number(visitors)} visitantes estimados en ${number(surveys)} encuestas.`,
     `La estadía promedio es de ${number(avgNights, 1)} noches.`,
     `El gasto promedio estimado por grupo es ${money(avgSpend)}.`,
-    `La satisfacción promedio es ${number(avgSatisfaction, 1)} sobre 5, con NPS ${number(nps)}.`
+    `La satisfacción promedio es ${number(avgSatisfaction, 1)} sobre 5, con NPS ${number(nps)}.`,
+    ...((() => {
+      const extra = [];
+      // Anticipación dominante
+      const anticipaciones = countBy(rows.filter(r => r.notes && r.notes.includes("Anticipación:")), "notes");
+      const anticipRows = rows.filter(r => r.notes && r.notes.includes("Anticipación:"));
+      if (anticipRows.length) {
+        const freqMap = anticipRows.reduce((acc, r) => {
+          const m = r.notes.match(/Anticipación: ([^|]+)/);
+          if (m) { const v = m[1].trim(); acc[v] = (acc[v]||0)+1; }
+          return acc;
+        }, {});
+        const top = Object.entries(freqMap).sort((a,b)=>b[1]-a[1])[0];
+        if (top) extra.push(`La mayoría planifica el viaje con: ${top[0]}.`);
+      }
+      // Razón de elección dominante
+      const razonRows = rows.filter(r => r.notes && r.notes.includes("Razón de elección:"));
+      if (razonRows.length) {
+        const freqMap = razonRows.reduce((acc, r) => {
+          const m = r.notes.match(/Razón de elección: ([^|]+)/);
+          if (m) { const v = m[1].trim(); acc[v] = (acc[v]||0)+1; }
+          return acc;
+        }, {});
+        const top = Object.entries(freqMap).sort((a,b)=>b[1]-a[1])[0];
+        if (top) extra.push(`El destino se elige principalmente por: ${top[0]}.`);
+      }
+      // Intención de retorno
+      const retornoRows = rows.filter(r => r.notes && r.notes.includes("Retorno:"));
+      if (retornoRows.length) {
+        const positivos = retornoRows.filter(r => r.notes.includes("Retorno: Sí")).length;
+        const pct = Math.round((positivos / retornoRows.length) * 100);
+        extra.push(`El ${pct}% de los encuestados indicó intención de volver.`);
+      }
+      // Actividad más realizada
+      const actRows = rows.filter(r => r.activities);
+      if (actRows.length) {
+        const freqMap = actRows.reduce((acc, r) => { acc[r.activities] = (acc[r.activities]||0)+1; return acc; }, {});
+        const top = Object.entries(freqMap).sort((a,b)=>b[1]-a[1])[0];
+        if (top) extra.push(`La actividad principal reportada es: ${top[0]}.`);
+      }
+      return extra;
+    })()),
   ] : ["No hay datos todavía. Sin base, no hay inteligencia; sólo intuición."];
 
   const listHtml = messages.map(msg => `<li>${escapeHtml(msg)}</li>`).join("");
@@ -356,6 +397,25 @@ function normalizeSurveyPayload(payload) {
   const municipalityName = safe(payload.municipio) || safe(state.municipality?.name);
   const provinceLabel = safe(payload.provincia) || safe(state.municipality?.province);
 
+  // Desglose de gasto
+  const gastoAlojamiento = Number(payload.gasto_alojamiento || 0);
+  const gastoGastronomia = Number(payload.gasto_gastronomia || 0);
+  const gastoActividades = Number(payload.gasto_actividades || 0);
+  const gastoCompras = Number(payload.gasto_compras || 0);
+  const gastoDesglosado = gastoAlojamiento + gastoGastronomia + gastoActividades + gastoCompras;
+  const gastoTotal = gastoDesglosado > 0 ? gastoDesglosado : Number(payload.gasto || 0);
+
+  // Construir notas enriquecidas con datos de comportamiento
+  const notasComportamiento = [
+    payload.anticipacion ? `Anticipación: ${safe(payload.anticipacion)}` : null,
+    payload.razon_eleccion ? `Razón de elección: ${safe(payload.razon_eleccion)}` : null,
+    payload.canal_reserva ? `Canal de reserva: ${safe(payload.canal_reserva)}` : null,
+    payload.retorno ? `Retorno: ${safe(payload.retorno)}` : null,
+    payload.epoca_retorno ? `Época preferida: ${safe(payload.epoca_retorno)}` : null,
+    gastoDesglosado > 0 ? `Desglose gasto — Aloj: $${gastoAlojamiento} | Gastro: $${gastoGastronomia} | Activ: $${gastoActividades} | Compras: $${gastoCompras}` : null,
+    safe(payload.mejora) ? `Mejoras: ${safe(payload.mejora)}` : null,
+  ].filter(Boolean).join(" | ");
+
   return {
     municipality_id: state.profile.municipality_id,
     municipality_name: municipalityName || null,
@@ -368,11 +428,11 @@ function normalizeSurveyPayload(payload) {
     purpose: safe(payload.motivo),
     transport_mode: safe(payload.transporte) || null,
     capture_channel: safe(payload.canal) || null,
-    estimated_spend_ars: Number(payload.gasto || 0),
+    estimated_spend_ars: gastoTotal,
     satisfaction: Number(payload.satisfaccion || 0),
     recommendation: Number(payload.recomendacion || 0),
-    activities: null,
-    notes: safe(payload.mejora) || null,
+    activities: safe(payload.actividades) || null,
+    notes: notasComportamiento || null,
   };
 }
 
@@ -595,7 +655,7 @@ async function clearDemoData() {
 
 function exportSurveyCsv() {
   const rows = getFilteredSurveyResponses();
-  const headers = ["visit_date","municipality_name","province_label","origin_place","group_size","nights","lodging_type","purpose","transport_mode","capture_channel","estimated_spend_ars","satisfaction","recommendation","notes"];
+  const headers = ["visit_date","municipality_name","province_label","origin_place","group_size","nights","lodging_type","purpose","transport_mode","capture_channel","estimated_spend_ars","satisfaction","recommendation","activities","notes"];
   const csv = [headers.join(",")].concat(rows.map(row => headers.map(h => `"${String(row[h] ?? "").replaceAll('"','""')}"`).join(","))).join("\n");
   downloadFile("encuestas_turisticas.csv", csv, "text/csv;charset=utf-8;");
 }
@@ -657,6 +717,21 @@ function bindUi() {
 async function startApp() {
   bindUi();
   document.getElementById("fecha").value = new Date().toISOString().slice(0, 10);
+
+  // Auto-suma de gasto desde rubros desglosados
+  const gastoRubros = ["gasto_alojamiento", "gasto_gastronomia", "gasto_actividades", "gasto_compras"];
+  gastoRubros.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener("input", () => {
+        const total = gastoRubros.reduce((sum, rid) => {
+          return sum + Number(document.getElementById(rid)?.value || 0);
+        }, 0);
+        if (total > 0) document.getElementById("gasto").value = total;
+      });
+    }
+  });
+
   if (!initSupabase()) return;
 
   supabaseClient.auth.onAuthStateChange((_event, session) => {

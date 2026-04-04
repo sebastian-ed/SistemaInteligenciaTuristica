@@ -190,6 +190,7 @@
               </div>
 
               <form id="surveyForm" class="form-grid">
+
                 <label>
                   Municipio
                   <input type="text" id="municipio" name="municipio" placeholder="Ej. Villa General Belgrano" required />
@@ -255,10 +256,90 @@
                   </select>
                 </label>
 
+                <!-- NUEVAS PREGUNTAS DE COMPORTAMIENTO -->
+
                 <label>
-                  Gasto estimado del grupo (ARS)
+                  ¿Con cuánta anticipación planificó el viaje?
+                  <select id="anticipacion" name="anticipacion" required>
+                    <option value="">Seleccionar</option>
+                    <option>Mismo día / espontáneo</option>
+                    <option>1 a 3 días antes</option>
+                    <option>1 semana antes</option>
+                    <option>2 a 3 semanas antes</option>
+                    <option>Más de un mes antes</option>
+                  </select>
+                </label>
+
+                <label>
+                  ¿Por qué eligió este destino y no otro?
+                  <select id="razon_eleccion" name="razon_eleccion" required>
+                    <option value="">Seleccionar</option>
+                    <option>Precio / economía</option>
+                    <option>Cercanía / distancia</option>
+                    <option>Recomendación de conocidos</option>
+                    <option>Lo encontré en redes o internet</option>
+                    <option>Ya lo conocía y quería volver</option>
+                    <option>Novedad / quería conocerlo</option>
+                    <option>Evento o atractivo específico</option>
+                    <option>Otro</option>
+                  </select>
+                </label>
+
+                <label>
+                  ¿Cómo realizó la reserva de alojamiento?
+                  <select id="canal_reserva" name="canal_reserva">
+                    <option value="">Seleccionar (opcional)</option>
+                    <option>Booking / Airbnb / OTA</option>
+                    <option>Directo con el alojamiento (tel. / WhatsApp)</option>
+                    <option>Agencia de viajes</option>
+                    <option>Sin reserva previa</option>
+                    <option>No se alojó</option>
+                  </select>
+                </label>
+
+                <label>
+                  Actividades realizadas en el destino
+                  <select id="actividades" name="actividades">
+                    <option value="">Seleccionar principal (opcional)</option>
+                    <option>Naturaleza / senderismo / aventura</option>
+                    <option>Gastronomía / enología</option>
+                    <option>Cultura / historia / museos</option>
+                    <option>Compras / artesanías</option>
+                    <option>Relax / descanso</option>
+                    <option>Deporte / actividad física</option>
+                    <option>Evento / show / festival</option>
+                    <option>Otro</option>
+                  </select>
+                </label>
+
+                <!-- DESGLOSE DE GASTO -->
+
+                <label>
+                  Gasto en alojamiento (ARS)
+                  <input type="number" id="gasto_alojamiento" name="gasto_alojamiento" min="0" step="1000" value="0" placeholder="0" />
+                </label>
+
+                <label>
+                  Gasto en gastronomía (ARS)
+                  <input type="number" id="gasto_gastronomia" name="gasto_gastronomia" min="0" step="1000" value="0" placeholder="0" />
+                </label>
+
+                <label>
+                  Gasto en actividades / excursiones (ARS)
+                  <input type="number" id="gasto_actividades" name="gasto_actividades" min="0" step="1000" value="0" placeholder="0" />
+                </label>
+
+                <label>
+                  Gasto en compras / souvenirs (ARS)
+                  <input type="number" id="gasto_compras" name="gasto_compras" min="0" step="1000" value="0" placeholder="0" />
+                </label>
+
+                <label class="full-width">
+                  Gasto estimado total del grupo (ARS) <small style="color:var(--muted);font-weight:400;">— se calcula solo si completaste los rubros</small>
                   <input type="number" id="gasto" name="gasto" min="0" step="1000" placeholder="Ej. 150000" required />
                 </label>
+
+                <!-- SATISFACCIÓN Y NPS -->
 
                 <label>
                   Satisfacción general (1 a 5)
@@ -273,9 +354,33 @@
                   <input type="number" id="recomendacion" name="recomendacion" min="0" max="10" value="8" required />
                 </label>
 
+                <label>
+                  ¿Volvería al destino?
+                  <select id="retorno" name="retorno">
+                    <option value="">Seleccionar (opcional)</option>
+                    <option>Sí, definitivamente</option>
+                    <option>Sí, probablemente</option>
+                    <option>No lo sé aún</option>
+                    <option>Probablemente no</option>
+                    <option>No volvería</option>
+                  </select>
+                </label>
+
+                <label>
+                  ¿En qué época volvería o recomendaría venir?
+                  <select id="epoca_retorno" name="epoca_retorno">
+                    <option value="">Seleccionar (opcional)</option>
+                    <option>Verano (dic-feb)</option>
+                    <option>Otoño (mar-may)</option>
+                    <option>Invierno (jun-ago)</option>
+                    <option>Primavera (sep-nov)</option>
+                    <option>Cualquier época</option>
+                  </select>
+                </label>
+
                 <label class="full-width">
                   Qué debería mejorar el municipio
-                  <textarea id="mejora" name="mejora" rows="4" placeholder="Ej. más señalética, baños públicos, mejor conectividad, eventos, limpieza, etc."></textarea>
+                  <textarea id="mejora" name="mejora" rows="3" placeholder="Ej. más señalética, baños públicos, mejor conectividad, eventos, limpieza, etc."></textarea>
                 </label>
 
                 <div class="full-width form-actions">
