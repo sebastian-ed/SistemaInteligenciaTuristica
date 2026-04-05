@@ -653,10 +653,85 @@ async function clearDemoData() {
   }
 }
 
+function parseNotesField(notes) {
+  // Extrae los campos estructurados guardados en notes como "Clave: Valor | ..."
+  const result = {
+    anticipacion: "",
+    razon_eleccion: "",
+    canal_reserva: "",
+    retorno: "",
+    epoca_retorno: "",
+    gasto_alojamiento: "",
+    gasto_gastronomia: "",
+    gasto_actividades: "",
+    gasto_compras: "",
+    mejoras: "",
+  };
+  if (!notes) return result;
+
+  // Anticipación
+  const anticipacion = notes.match(/Anticipaci[oó]n:\s*([^|]+)/i);
+  if (anticipacion) result.anticipacion = anticipacion[1].trim();
+
+  // Razón de elección
+  const razon = notes.match(/Raz[oó]n de elecci[oó]n:\s*([^|]+)/i);
+  if (razon) result.razon_eleccion = razon[1].trim();
+
+  // Canal de reserva
+  const canalReserva = notes.match(/Canal de reserva:\s*([^|]+)/i);
+  if (canalReserva) result.canal_reserva = canalReserva[1].trim();
+
+  // Retorno
+  const retorno = notes.match(/Retorno:\s*([^|]+)/i);
+  if (retorno) result.retorno = retorno[1].trim();
+
+  // Época preferida
+  const epoca = notes.match(/[EÉ]poca preferida:\s*([^|]+)/i);
+  if (epoca) result.epoca_retorno = epoca[1].trim();
+
+  // Desglose de gasto — Aloj: $X | Gastro: $Y | Activ: $Z | Compras: $W
+  const aloj = notes.match(/Aloj:\s*\$?([\d.]+)/i);
+  if (aloj) result.gasto_alojamiento = aloj[1].trim();
+
+  const gastro = notes.match(/Gastro:\s*\$?([\d.]+)/i);
+  if (gastro) result.gasto_gastronomia = gastro[1].trim();
+
+  const activ = notes.match(/Activ:\s*\$?([\d.]+)/i);
+  if (activ) result.gasto_actividades = activ[1].trim();
+
+  const compras = notes.match(/Compras:\s*\$?([\d.]+)/i);
+  if (compras) result.gasto_compras = compras[1].trim();
+
+  // Mejoras
+  const mejoras = notes.match(/Mejoras:\s*([^|]+)/i);
+  if (mejoras) result.mejoras = mejoras[1].trim();
+
+  return result;
+}
+
 function exportSurveyCsv() {
   const rows = getFilteredSurveyResponses();
-  const headers = ["visit_date","municipality_name","province_label","origin_place","group_size","nights","lodging_type","purpose","transport_mode","capture_channel","estimated_spend_ars","satisfaction","recommendation","activities","notes"];
-  const csv = [headers.join(",")].concat(rows.map(row => headers.map(h => `"${String(row[h] ?? "").replaceAll('"','""')}"`).join(","))).join("\n");
+  const baseHeaders = [
+    "visit_date","municipality_name","province_label","origin_place",
+    "group_size","nights","lodging_type","purpose","transport_mode",
+    "capture_channel","estimated_spend_ars","satisfaction","recommendation","activities"
+  ];
+  const behaviorHeaders = [
+    "anticipacion","razon_eleccion","canal_reserva","retorno","epoca_retorno",
+    "gasto_alojamiento","gasto_gastronomia","gasto_actividades","gasto_compras","mejoras"
+  ];
+  const allHeaders = [...baseHeaders, ...behaviorHeaders];
+
+  const csvCell = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+
+  const dataRows = rows.map(row => {
+    const parsed = parseNotesField(row.notes);
+    const base = baseHeaders.map(h => csvCell(row[h]));
+    const behavior = behaviorHeaders.map(h => csvCell(parsed[h]));
+    return [...base, ...behavior].join(",");
+  });
+
+  const csv = [allHeaders.join(","), ...dataRows].join("\n");
   downloadFile("encuestas_turisticas.csv", csv, "text/csv;charset=utf-8;");
 }
 
