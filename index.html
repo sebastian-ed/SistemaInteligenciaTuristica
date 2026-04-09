@@ -12,6 +12,8 @@
   <link rel="icon" href="data:,">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="./supabase.js"></script>
   <script defer src="./app.js"></script>
 </head>
@@ -82,6 +84,22 @@
             </label>
             <button class="btn btn-primary btn-block span-2" id="loginSubmitBtn" type="submit">Ingresar</button>
           </form>
+          <div style="text-align:center;margin-top:10px;">
+            <button type="button" class="link-btn" id="forgotPasswordBtn">¿Olvidaste tu contraseña?</button>
+          </div>
+
+          <!-- Panel recuperar contraseña -->
+          <div id="forgotPasswordPanel" class="hidden" style="margin-top:16px;">
+            <div class="auth-divider"><span>recuperar acceso</span></div>
+            <form id="forgotPasswordForm" class="grid-form" style="grid-template-columns:1fr;">
+              <label>
+                <span>Email de la cuenta</span>
+                <input type="email" name="recovery_email" id="recoveryEmailInput" placeholder="turismo@municipio.gob.ar" required />
+              </label>
+              <button class="btn btn-secondary btn-block" id="forgotPasswordSubmitBtn" type="submit">Enviar enlace de recuperación</button>
+              <button type="button" class="btn btn-secondary btn-block" id="cancelForgotBtn" style="margin-top:4px;">Cancelar</button>
+            </form>
+          </div>
 
           <div class="auth-divider"><span>o crear cuenta inicial</span></div>
 
@@ -406,7 +424,7 @@
                 <table>
                   <thead>
                     <tr>
-                      <th>Fecha</th><th>Municipio</th><th>Origen</th><th>Grupo</th><th>Noches</th><th>Motivo</th><th>Alojamiento</th><th>Transporte</th><th>Gasto</th><th>Satisfacción</th>
+                      <th>Fecha</th><th>Municipio</th><th>Provincia</th><th>Origen</th><th>Grupo</th><th>Noches</th><th>Motivo</th><th>Alojamiento</th><th>Transporte</th><th>Canal</th><th>Actividades</th><th>Gasto</th><th>Satisf.</th><th>Recomend.</th><th>Anticipación</th><th>Razón elección</th><th>Canal reserva</th><th>Retorno</th><th>Época</th><th>Mejoras</th>
                     </tr>
                   </thead>
                   <tbody id="surveyTableBody"></tbody>
@@ -485,6 +503,7 @@
               <div class="stack-actions">
                 <button class="btn btn-secondary" id="downloadReportJsonBtn">Descargar reporte JSON</button>
                 <button class="btn btn-secondary" id="printReportBtn">Imprimir / PDF</button>
+                <button class="btn btn-primary" id="downloadDashboardPdfBtn">📥 Descargar Dashboard PDF</button>
               </div>
             </section>
           </section>
@@ -508,10 +527,36 @@
               </div>
             </form>
           </section>
+
+          <section class="panel" style="margin-top:20px;">
+            <div class="section-header">
+              <div>
+                <p class="eyebrow">SEGURIDAD</p>
+                <h3>Cambiar contraseña</h3>
+              </div>
+            </div>
+            <form id="changePasswordForm" class="form-grid">
+              <label>
+                <span>Nueva contraseña</span>
+                <input type="password" id="newPasswordInput" name="new_password" minlength="6" placeholder="Mínimo 6 caracteres" required />
+              </label>
+              <label>
+                <span>Confirmar nueva contraseña</span>
+                <input type="password" id="confirmPasswordInput" name="confirm_password" minlength="6" placeholder="Repetir contraseña" required />
+              </label>
+              <div class="full-width form-actions">
+                <button class="btn btn-primary" id="changePasswordBtn" type="submit">Cambiar contraseña</button>
+              </div>
+            </form>
+          </section>
         </section>
       </section>
     </main>
   </div>
+
+  <footer>
+        <p>Copyright © 2026 Sebastian Portillo. All rights reserved. No one may copy, modify, distribute, or sell this software without written permission.</p>
+  </footer>
 
   <div id="toast" class="toast hidden"></div>
 </body>

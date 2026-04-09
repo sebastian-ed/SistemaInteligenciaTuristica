@@ -48,6 +48,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#99b9f2;box-sh
 .export-bar,.stack-actions,.form-actions{display:flex;gap:10px;flex-wrap:wrap}
 .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px}table{width:100%;border-collapse:collapse;min-width:980px;background:#fff}th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line)}th{background:#f9fbfe;font-size:.82rem;color:var(--muted)}tr:hover td{background:rgba(17,32,51,.02)}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0f1b2b;color:#fff;padding:12px 14px;border-radius:14px;box-shadow:var(--shadow);z-index:30;max-width:min(92vw,520px)}
+.link-btn{background:none;border:none;color:var(--primary);font-size:.9rem;cursor:pointer;padding:0;text-decoration:underline;font-weight:600}.link-btn:hover{color:var(--primary-strong)}
 .full-width,.span-2{grid-column:span 1}.footer{padding:0 16px 28px;color:var(--muted)}
 @media (min-width:768px){
   .app-shell{grid-template-columns:280px 1fr}

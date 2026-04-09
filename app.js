@@ -172,20 +172,32 @@ function renderCharts() {
 
 function renderSurveyTable() {
   const rows = [...getFilteredSurveyResponses()].sort((a, b) => (a.visit_date < b.visit_date ? 1 : -1));
-  el.surveyTableBody.innerHTML = rows.map(row => `
+  el.surveyTableBody.innerHTML = rows.map(row => {
+    const parsed = parseNotesField(row.notes);
+    return `
     <tr>
       <td>${formatDate(row.visit_date)}</td>
       <td>${escapeHtml(row.municipality_name || state.municipality?.name || "—")}</td>
+      <td>${escapeHtml(row.province_label || "—")}</td>
       <td>${escapeHtml(row.origin_place)}</td>
       <td>${number(row.group_size)}</td>
       <td>${number(row.nights)}</td>
       <td>${escapeHtml(row.purpose)}</td>
       <td>${escapeHtml(row.lodging_type)}</td>
       <td>${escapeHtml(row.transport_mode || "—")}</td>
+      <td>${escapeHtml(row.capture_channel || "—")}</td>
+      <td>${escapeHtml(row.activities || "—")}</td>
       <td>${money(row.estimated_spend_ars)}</td>
       <td>${number(row.satisfaction, 0)}/5</td>
+      <td>${number(row.recommendation, 0)}/10</td>
+      <td>${escapeHtml(parsed.anticipacion || "—")}</td>
+      <td>${escapeHtml(parsed.razon_eleccion || "—")}</td>
+      <td>${escapeHtml(parsed.canal_reserva || "—")}</td>
+      <td>${escapeHtml(parsed.retorno || "—")}</td>
+      <td>${escapeHtml(parsed.epoca_retorno || "—")}</td>
+      <td>${escapeHtml(parsed.mejoras || "—")}</td>
     </tr>
-  `).join("") || `<tr><td colspan="10">Todavía no hay encuestas cargadas.</td></tr>`;
+  `}).join("") || `<tr><td colspan="20">Todavía no hay encuestas cargadas.</td></tr>`;
 }
 
 function renderLodgingTable() {
@@ -751,7 +763,94 @@ function downloadReportJson() {
   downloadFile("reporte_observatorio.json", JSON.stringify(payload, null, 2), "application/json");
 }
 
-function bindFilters() {
+async function handleForgotPassword(event) {
+  event.preventDefault();
+  const btn = document.getElementById("forgotPasswordSubmitBtn");
+  setButtonBusy(btn, true, "Enviando...", "Enviar enlace de recuperación");
+  try {
+    const email = String(document.getElementById("recoveryEmailInput").value || "").trim();
+    if (!email) throw new Error("Ingresá tu email.");
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname,
+    });
+    if (error) throw error;
+    showToast("✓ Revisá tu email. Te enviamos un enlace para restablecer la contraseña.");
+    document.getElementById("forgotPasswordPanel").classList.add("hidden");
+    document.getElementById("recoveryEmailInput").value = "";
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "No se pudo enviar el email de recuperación.");
+  } finally {
+    setButtonBusy(btn, false, "Enviando...", "Enviar enlace de recuperación");
+  }
+}
+
+async function handleChangePassword(event) {
+  event.preventDefault();
+  const btn = document.getElementById("changePasswordBtn");
+  setButtonBusy(btn, true, "Guardando...", "Cambiar contraseña");
+  try {
+    const newPassword = String(document.getElementById("newPasswordInput").value || "");
+    const confirmPassword = String(document.getElementById("confirmPasswordInput").value || "");
+    if (!newPassword || newPassword.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
+    if (newPassword !== confirmPassword) throw new Error("Las contraseñas no coinciden.");
+    const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    document.getElementById("changePasswordForm").reset();
+    showToast("✓ Contraseña actualizada correctamente.");
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "No se pudo cambiar la contraseña.");
+  } finally {
+    setButtonBusy(btn, false, "Guardando...", "Cambiar contraseña");
+  }
+}
+
+async function downloadDashboardPdf() {
+  const btn = document.getElementById("downloadDashboardPdfBtn");
+  setButtonBusy(btn, true, "Generando PDF...", "📥 Descargar Dashboard PDF");
+  try {
+    // Temporarily switch to dashboard view for capture
+    const currentActive = document.querySelector(".nav-link.active")?.dataset?.view || "reports";
+    setActiveView("dashboard");
+    await new Promise(r => setTimeout(r, 400)); // wait for charts to render
+
+    const dashboardEl = document.getElementById("dashboardView");
+    const canvas = await html2canvas(dashboardEl, {
+      scale: 1.5,
+      useCORS: true,
+      backgroundColor: "#f4f7fb",
+      logging: false,
+    });
+
+    const { jsPDF } = window.jspdf;
+    const imgData = canvas.toDataURL("image/png");
+    const pdfWidth = 210; // A4 mm
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pdf = new jsPDF({ orientation: pdfHeight > pdfWidth ? "portrait" : "landscape", unit: "mm", format: "a4" });
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    let yPos = 0;
+    const pageCount = Math.ceil(pdfHeight / pageHeight);
+    for (let i = 0; i < pageCount; i++) {
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, -i * pageHeight, pdfWidth, pdfHeight);
+    }
+
+    const munName = (state.municipality?.name || "observatorio").replace(/\s+/g, "_");
+    const fecha = new Date().toISOString().slice(0, 10);
+    pdf.save(`dashboard_${munName}_${fecha}.pdf`);
+
+    setActiveView(currentActive);
+    showToast("✓ PDF descargado correctamente.");
+  } catch (error) {
+    console.error(error);
+    showToast("No se pudo generar el PDF. Intentá de nuevo.");
+  } finally {
+    setButtonBusy(btn, false, "Generando PDF...", "📥 Descargar Dashboard PDF");
+  }
+}
+
+
   el.filterStartDate.addEventListener("change", (e) => { state.filters.startDate = e.target.value; renderAll(); });
   el.filterEndDate.addEventListener("change", (e) => { state.filters.endDate = e.target.value; renderAll(); });
   el.filterOrigin.addEventListener("change", (e) => { state.filters.origin = e.target.value; renderAll(); });
@@ -770,6 +869,15 @@ function bindUi() {
   document.getElementById("surveyForm").addEventListener("submit", handleSurveySubmit);
   document.getElementById("lodgingForm").addEventListener("submit", handleLodgingSubmit);
   document.getElementById("profileForm").addEventListener("submit", handleProfileSubmit);
+  document.getElementById("changePasswordForm").addEventListener("submit", handleChangePassword);
+  document.getElementById("forgotPasswordForm").addEventListener("submit", handleForgotPassword);
+  document.getElementById("forgotPasswordBtn").addEventListener("click", () => {
+    document.getElementById("forgotPasswordPanel").classList.toggle("hidden");
+  });
+  document.getElementById("cancelForgotBtn").addEventListener("click", () => {
+    document.getElementById("forgotPasswordPanel").classList.add("hidden");
+    document.getElementById("recoveryEmailInput").value = "";
+  });
   document.getElementById("seedDemoBtn").addEventListener("click", seedDemoData);
   document.getElementById("clearDemoBtn").addEventListener("click", clearDemoData);
   document.getElementById("syncBtn").addEventListener("click", () => syncAll(true));
@@ -777,6 +885,7 @@ function bindUi() {
   document.getElementById("exportSurveyJsonBtn").addEventListener("click", exportSurveyJson);
   document.getElementById("downloadReportJsonBtn").addEventListener("click", downloadReportJson);
   document.getElementById("printReportBtn").addEventListener("click", () => window.print());
+  document.getElementById("downloadDashboardPdfBtn").addEventListener("click", downloadDashboardPdf);
   el.backToDashboardBtn.addEventListener("click", () => setActiveView("dashboard"));
 
   document.querySelectorAll(".nav-link").forEach(btn => {
@@ -811,6 +920,18 @@ async function startApp() {
 
   supabaseClient.auth.onAuthStateChange((_event, session) => {
     state.user = session?.user || null;
+    // If user arrives via password recovery link, redirect to settings so they can set new password
+    if (_event === "PASSWORD_RECOVERY") {
+      state.user = session?.user || null;
+      el.authScreen.classList.add("hidden");
+      el.appContent.classList.remove("hidden");
+      window.setTimeout(async () => {
+        await syncAll(false);
+        setActiveView("settings");
+        showToast("Ingresá tu nueva contraseña en la sección Seguridad.");
+      }, 0);
+      return;
+    }
     window.setTimeout(() => {
       fetchSessionAndData();
     }, 0);
