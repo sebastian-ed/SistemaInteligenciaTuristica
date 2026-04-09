@@ -851,6 +851,7 @@ async function downloadDashboardPdf() {
 }
 
 
+function bindFilters() {
   el.filterStartDate.addEventListener("change", (e) => { state.filters.startDate = e.target.value; renderAll(); });
   el.filterEndDate.addEventListener("change", (e) => { state.filters.endDate = e.target.value; renderAll(); });
   el.filterOrigin.addEventListener("change", (e) => { state.filters.origin = e.target.value; renderAll(); });
